@@ -4,10 +4,12 @@
  * - 首次运行自动构建前端（web/dist 缺失时）
  * - 首次运行引导设置登录密码（data/config.json 缺失时）
  * - 启动服务并自动打开浏览器
- * - 关闭这个窗口，服务就停止（不会开机自启，也不会注册服务）
+ * - 服务以隐藏的后台进程运行；按回车关掉这个窗口，服务继续跑
+ * - 停止服务用「停止学生状态管理系统.cmd」，不会开机自启
  *
  * 可选环境变量：
  *   PORT=3210        监听端口
+ *   HOST=0.0.0.0     监听地址（默认回环 + 局域网）
  *   LAUNCH_NO_OPEN=1 只启动服务，不打开浏览器（调试用）
  */
 import { spawn, spawnSync } from 'node:child_process';
@@ -19,7 +21,7 @@ import { fileURLToPath } from 'node:url';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const PORT = Number(process.env.PORT || 3210);
-const HOST = process.env.HOST || '127.0.0.1';
+const HOST = process.env.HOST || '0.0.0.0';
 const URL = `http://127.0.0.1:${PORT}`;
 const NO_OPEN = process.env.LAUNCH_NO_OPEN === '1';
 
@@ -166,6 +168,40 @@ async function waitForHealth(timeoutMs = 30000) {
   return false;
 }
 
+/**
+ * 以「脱离控制台」的方式启动服务：窗口关掉后进程继续跑。
+ * stdout/stderr 落 logs\server.out.log / server.err.log，PID 落 logs\server.pid。
+ */
+function startDetachedServer() {
+  const logDir = path.join(ROOT, 'logs');
+  fs.mkdirSync(logDir, { recursive: true });
+  const outPath = path.join(logDir, 'server.out.log');
+  const errPath = path.join(logDir, 'server.err.log');
+  const out = fs.openSync(outPath, 'a');
+  const err = fs.openSync(errPath, 'a');
+  let child;
+  try {
+    child = spawn(process.execPath, [path.join(ROOT, 'server', 'index.js')], {
+      cwd: ROOT,
+      detached: true,
+      windowsHide: true,
+      stdio: ['ignore', out, err],
+      env: {
+        ...process.env,
+        HOST,
+        PORT: String(PORT),
+        COOKIE_SECURE: process.env.COOKIE_SECURE || 'auto',
+      },
+    });
+  } finally {
+    fs.closeSync(out);
+    fs.closeSync(err);
+  }
+  child.unref();
+  fs.writeFileSync(path.join(logDir, 'server.pid'), `${child.pid}\n`, 'utf8');
+  return child;
+}
+
 async function main() {
   process.chdir(ROOT);
 
@@ -195,46 +231,23 @@ async function main() {
   }
 
   log(`正在启动服务：${URL}`);
-  const server = spawn(process.execPath, [path.join(ROOT, 'server', 'index.js')], {
-    cwd: ROOT,
-    stdio: 'inherit',
-    env: { ...process.env, PORT: String(PORT) },
-  });
+  startDetachedServer();
 
-  let opened = false;
-  const timer = setInterval(async () => {
-    if (opened) return;
-    if (await isServerUp()) {
-      opened = true;
-      clearInterval(timer);
-      log('启动成功，正在打开浏览器…');
-      openBrowser(URL);
-      printAccessUrls();
-      saveAccessUrls();
-      log('关闭这个窗口，服务就会停止。');
-    }
-  }, 500);
+  if (!(await waitForHealth(30000))) {
+    log('服务启动失败，请查看日志：');
+    console.log(`    ${path.join(ROOT, 'logs', 'server.err.log')}`);
+    process.exitCode = 1;
+    await pauseIfInteractive();
+    return;
+  }
 
-  const shutdown = () => {
-    clearInterval(timer);
-    try {
-      server.kill('SIGINT');
-    } catch {
-      /* 已退出 */
-    }
-  };
-  process.once('SIGINT', shutdown);
-  process.once('SIGTERM', shutdown);
-
-  server.on('exit', (code, signal) => {
-    clearInterval(timer);
-    if (!opened && code !== 0) {
-      log('服务启动失败，请查看上面的报错信息。');
-    } else if (signal) {
-      log('服务已停止。');
-    }
-    process.exit(code ?? 0);
-  });
+  log('启动成功，正在打开浏览器…');
+  openBrowser(URL);
+  printAccessUrls();
+  saveAccessUrls();
+  log('服务已在后台运行。按回车关闭这个窗口，服务不会停。');
+  log('需要停止时，双击「停止学生状态管理系统.cmd」。');
+  await pauseIfInteractive();
 }
 
 main().catch((err) => {
