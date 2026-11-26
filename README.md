@@ -135,6 +135,20 @@ Node 没在 PATH 里时，把命令里的 `node.exe` / `npm.cmd` 换成实际安
 
 手机和电脑共用服务器配置，一处保存另一端自动生效；但局域网 HTTP 下提交 Key 会以明文经过 Wi-Fi（没有 TLS），仅适合临时/同 Wi-Fi 使用，正式跨网请走 §6 的 Tailscale HTTPS。
 
+### 3.7 忘记登录密码
+
+双击项目根目录的 `重置登录密码.cmd`（`install.ps1` 也会在桌面建一个同名快捷方式）：
+
+1. 输入 `RESET` 确认；
+2. 输入新密码两遍（至少 6 位）；
+3. 已登录设备会被退出；服务器保存的大模型 API Key 会失效，需要到设置页重新填一次。
+
+旧配置会自动备份成 `data\config.json.bak-<时间戳>`，学生数据不受影响。也可以命令行跑：
+
+```powershell
+node scripts\reset-password.js
+```
+
 ---
 
 ## 4. 从零到可用（8 步）

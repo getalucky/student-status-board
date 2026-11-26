@@ -289,13 +289,15 @@ if (Test-Path -LiteralPath $deployGuide) {
 } else {
     Write-Log '警告：docs\部署说明.md 不存在，发布包将不带部署说明。' 'WARN'
 }
-$checkUpdateCmd = Join-Path $root '检查更新.cmd'
-if (Test-Path -LiteralPath $checkUpdateCmd) {
-    Copy-Item -LiteralPath $checkUpdateCmd -Destination (Join-Path $stage '检查更新.cmd') -Force
+$cmdFiles = Get-ChildItem -LiteralPath $root -Filter '*.cmd' -File
+if ($cmdFiles.Count -eq 0) {
+    Write-Log '警告：根目录没有 .cmd 入口，发布包将不带双击启动/停止/重置密码。' 'WARN'
 } else {
-    Write-Log '警告：根目录没有 检查更新.cmd，发布包将不带双击更新入口。' 'WARN'
+    foreach ($cmd in $cmdFiles) {
+        Copy-Item -LiteralPath $cmd.FullName -Destination (Join-Path $stage $cmd.Name) -Force
+    }
 }
-Write-Log ("已复制：server / shared / scripts / deploy / web/dist / package.json / package-lock.json / README.md / 部署说明.md")
+Write-Log ("已复制：server / shared / scripts / deploy / web/dist / package.json / package-lock.json / README.md / 部署说明.md / {0} 个 .cmd" -f $cmdFiles.Count)
 
 # ================================================================ 3. 生产依赖
 $stageNodeModules = Join-Path $stage 'node_modules'

@@ -340,32 +340,52 @@ if (Test-Path -LiteralPath $configPath) {
 
 # ---------------------------------------------------------------- 桌面快捷方式
 function New-DesktopShortcut {
-    param([string]$Root, [string]$Name = '学生状态管理系统')
+    param(
+        [string]$Root,
+        [string]$Name,
+        [string]$TargetFile,
+        [string]$Description = '学生状态管理系统'
+    )
     $desktop = [Environment]::GetFolderPath('Desktop')
     if (-not $desktop) { throw '找不到当前用户的桌面目录' }
-    $target = Join-Path $Root '启动学生状态管理系统.cmd'
+    $target = Join-Path $Root $TargetFile
     if (-not (Test-Path -LiteralPath $target)) { throw "找不到启动器：$target" }
     $lnk = Join-Path $desktop ($Name + '.lnk')
     $shell = New-Object -ComObject WScript.Shell
     $shortcut = $shell.CreateShortcut($lnk)
     $shortcut.TargetPath = $target
     $shortcut.WorkingDirectory = $Root
-    $shortcut.Description = '学生状态管理系统 · 双击启动'
+    $shortcut.Description = $Description
     $shortcut.IconLocation = (Join-Path $env:SystemRoot 'System32\shell32.dll') + ',220'
     $shortcut.Save()
     return $lnk
 }
 
+$cmdExt = [string][char]46 + 'cmd'
+$launcherFile = "启动学生状态管理系统$cmdExt"
+$resetFile = "重置登录密码$cmdExt"
+
 if ($SkipShortcut) {
     Write-Log '跳过桌面快捷方式（-SkipShortcut）' 'WARN'
 } elseif ($DryRun) {
-    Write-Log '[dry-run] 将在桌面创建「学生状态管理系统」快捷方式 → 启动学生状态管理系统.cmd'
+    Write-Log "[dry-run] 将在桌面创建「学生状态管理系统」快捷方式 → $launcherFile"
+    if (Test-Path -LiteralPath (Join-Path $script:Root $resetFile)) {
+        Write-Log "[dry-run] 同时创建「重置登录密码」快捷方式 → $resetFile"
+    }
 } else {
     try {
-        $lnk = New-DesktopShortcut -Root $script:Root
+        $lnk = New-DesktopShortcut -Root $script:Root -Name '学生状态管理系统' -TargetFile $launcherFile -Description '学生状态管理系统 · 双击启动'
         Write-Log "桌面快捷方式已创建：$lnk" 'OK'
     } catch {
-        Write-Log ("桌面快捷方式创建失败：{0}，手动把 启动学生状态管理系统.cmd 发到桌面即可" -f $_.Exception.Message) 'WARN'
+        Write-Log ("桌面快捷方式创建失败：{0}，手动把 $launcherFile 发到桌面即可" -f $_.Exception.Message) 'WARN'
+    }
+    if (Test-Path -LiteralPath (Join-Path $script:Root $resetFile)) {
+        try {
+            $lnk2 = New-DesktopShortcut -Root $script:Root -Name '重置登录密码' -TargetFile $resetFile -Description '忘记密码时重置学生状态管理系统登录密码'
+            Write-Log "重置密码快捷方式已创建：$lnk2" 'OK'
+        } catch {
+            Write-Log ("重置密码快捷方式创建失败：{0}" -f $_.Exception.Message) 'WARN'
+        }
     }
 }
 

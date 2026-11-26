@@ -9,6 +9,7 @@ import { openDatabase } from '../server/db.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const INIT = path.join(ROOT, 'scripts', 'init.js');
+const RESET = path.join(ROOT, 'scripts', 'reset-password.js');
 const BACKUP = path.join(ROOT, 'scripts', 'backup.js');
 
 function tempDir(prefix) {
@@ -33,6 +34,47 @@ test('scripts/init.js：写 config.json，重复执行须 --force', () => {
 
     const forced = spawnSync(process.execPath, [INIT, '--password', 'newpass456', '--force'], { env, encoding: 'utf8' });
     assert.equal(forced.status, 0, forced.stderr);
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('scripts/reset-password.js：换哈希、备份 config、清会话与 LLM 配置', () => {
+  const dir = tempDir('ssb-reset-');
+  try {
+    const env = { ...process.env, DATA_DIR: dir };
+    const first = spawnSync(process.execPath, [INIT, '--password', 'testpass123'], { env, encoding: 'utf8' });
+    assert.equal(first.status, 0, first.stderr);
+
+    const configPath = path.join(dir, 'config.json');
+    const before = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+
+    const db = openDatabase(path.join(dir, 'app.db'));
+    db.prepare('INSERT INTO sessions (token, expires_at) VALUES (?, ?)').run('old-session', Date.now() + 60_000);
+    db.prepare("INSERT INTO app_settings (key, value, updated_at) VALUES ('llm_config', '{}', ?)").run(Date.now());
+    db.close();
+
+    const reset = spawnSync(
+      process.execPath,
+      [RESET, '--password', 'newpass456', '--yes'],
+      { env, encoding: 'utf8' },
+    );
+    assert.equal(reset.status, 0, reset.stderr);
+
+    const after = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+    assert.notEqual(after.passwordHash, before.passwordHash);
+    assert.ok(
+      fs.readdirSync(dir).some((name) => name.startsWith('config.json.bak-')),
+      '应保留旧 config 备份',
+    );
+
+    const check = openDatabase(path.join(dir, 'app.db'));
+    assert.equal(Number(check.prepare('SELECT COUNT(*) AS n FROM sessions').get().n), 0);
+    assert.equal(
+      Number(check.prepare("SELECT COUNT(*) AS n FROM app_settings WHERE key = 'llm_config'").get().n),
+      0,
+    );
+    check.close();
   } finally {
     fs.rmSync(dir, { recursive: true, force: true });
   }
