@@ -63,7 +63,14 @@
     不创建桌面快捷方式。
 
 .PARAMETER SkipTailscale
-    不配置 tailscale serve。
+    不绑定 Tailscale。
+
+.PARAMETER TailscaleAuthKey
+    Tailscale auth key（tskey-auth-...）。给了就能无人值守加入 tailnet；
+    不给时已登录的机器直接用，没登录会提示手动跑 绑定Tailscale.cmd。
+
+.PARAMETER InstallTailscale
+    没装 Tailscale 时自动静默安装（winget 优先，其次官方 MSI）。
 
 .PARAMETER SkipBackupTask
     不注册每日备份任务。
@@ -102,6 +109,8 @@ param(
     [switch]$SkipService,
     [switch]$SkipShortcut,
     [switch]$SkipTailscale,
+    [string]$TailscaleAuthKey,
+    [switch]$InstallTailscale,
     [switch]$SkipBackupTask,
     [switch]$DryRun,
     [switch]$NoElevate
@@ -532,44 +541,45 @@ if ($skipService) {
 }
 
 # ---------------------------------------------------------------- Tailscale
-function Get-TailscaleExe {
-    $cmd = Get-Command tailscale -ErrorAction SilentlyContinue
-    if ($cmd) { return $cmd.Source }
-    foreach ($c in @('C:\Program Files\Tailscale\tailscale.exe', 'C:\Program Files (x86)\Tailscale\tailscale.exe')) {
-        if (Test-Path -LiteralPath $c) { return $c }
-    }
-    return $null
-}
-
 $phoneUrl = $null
+$tailscaleUrlFile = Join-Path (Join-Path $script:Root 'logs') 'tailscale-url.txt'
+if (Test-Path -LiteralPath $tailscaleUrlFile) {
+    $knownUrl = (Get-Content -LiteralPath $tailscaleUrlFile -Raw).Trim()
+    if ($knownUrl -match '^https://') { $phoneUrl = $knownUrl }
+}
+$tailscaleBind = Join-Path $PSScriptRoot 'tailscale-bind.ps1'
 if ($SkipTailscale) {
     Write-Log '跳过 Tailscale（-SkipTailscale）' 'WARN'
+} elseif ($DryRun) {
+    Write-Log ("[dry-run] deploy\tailscale-bind.ps1 -Port {0}{1}" -f $Port, $(if ($InstallTailscale) { ' -Install' } else { '' }))
+} elseif (-not (Test-Path -LiteralPath $tailscaleBind)) {
+    Write-Log '找不到 deploy\tailscale-bind.ps1：跳过 Tailscale' 'WARN'
 } else {
-    Write-Log '检测 Tailscale'
-    $tsExe = Get-TailscaleExe
-    if ($null -eq $tsExe) {
-        Write-Log '未安装 Tailscale：手机跨网访问会不可用。安装脚本不会自动下载/安装 Tailscale。' 'WARN'
-        Write-Log '装好后再跑：https://tailscale.com/download/windows  然后 tailscale serve --bg http://127.0.0.1:3210' 'WARN'
-    } elseif ($DryRun) {
-        Write-Log ("[dry-run] tailscale serve --bg http://127.0.0.1:{0}" -f $Port)
+    Write-Log '绑定 Tailscale（安装 / 登录 / serve 一条龙）'
+    $oldKey = $env:TS_AUTHKEY
+    if (-not [string]::IsNullOrWhiteSpace($TailscaleAuthKey)) { $env:TS_AUTHKEY = $TailscaleAuthKey }
+    $bindArgs = @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', $tailscaleBind, '-Port', [string]$Port, '-ListenHost', '127.0.0.1')
+    if ($InstallTailscale) { $bindArgs += '-Install' }
+    $bindExit = 0
+    try {
+        & powershell.exe @bindArgs 2>&1 | Out-Host
+        $bindExit = $LASTEXITCODE
+    } catch {
+        Write-Log ("Tailscale 绑定异常：{0}" -f $_.Exception.Message) 'WARN'
+        $bindExit = 1
+    } finally {
+        if ($null -eq $oldKey) { Remove-Item -Path 'Env:TS_AUTHKEY' -ErrorAction SilentlyContinue }
+        else { $env:TS_AUTHKEY = $oldKey }
+    }
+    if ($bindExit -ne 0) {
+        Write-Log 'Tailscale 没绑好：不影响本机和局域网使用。双击 绑定Tailscale.cmd 可重试。' 'WARN'
     } else {
-        $tsStatus = (& $tsExe status 2>&1 | Out-String)
-        if ($LASTEXITCODE -ne 0 -or $tsStatus -match 'Logged out|not logged in|NeedsLogin') {
-            Write-Log 'Tailscale 未登录：先执行 tailscale up 登录同一 tailnet，再跑本脚本。' 'WARN'
-        } else {
-            Write-Log '配置 tailscale serve'
-            & $tsExe serve --bg ("http://127.0.0.1:{0}" -f $Port) | Out-Host
-            $serveCode = $LASTEXITCODE
-            if ($serveCode -ne 0) {
-                Write-Log 'tailscale serve 失败：去 https://login.tailscale.com/admin/dns 开启 HTTPS Certificates 后重试。' 'WARN'
-            } else {
-                Write-Log 'tailscale serve 已后台常驻' 'OK'
-            }
-            try {
-                $json = & $tsExe status --json | Out-String | ConvertFrom-Json
-                if ($json.Self.DNSName) { $phoneUrl = 'https://' + ([string]$json.Self.DNSName).TrimEnd('.') }
-            } catch { }
+        $urlFile = Join-Path (Join-Path $script:Root 'logs') 'tailscale-url.txt'
+        if (Test-Path -LiteralPath $urlFile) {
+            $tailUrl = (Get-Content -LiteralPath $urlFile -Raw).Trim()
+            if ($tailUrl -match '^https://') { $phoneUrl = $tailUrl }
         }
+        if ($phoneUrl) { Write-Log ("跨网地址：{0}" -f $phoneUrl) 'OK' }
     }
 }
 
@@ -688,7 +698,7 @@ else { Write-Host ("  服务名：{0}（手动启动，不开机自启）" -f $S
 Write-Host ("  本机  ：http://127.0.0.1:{0}" -f $Port)
 if ($ListenHost -eq '0.0.0.0') { Write-Host ("  局域网：http://<本机局域网IP>:{0}（同一 Wi-Fi 可用）" -f $Port) }
 if ($phoneUrl) { Write-Host ("  手机  ：{0}" -f $phoneUrl) -ForegroundColor Green }
-else { Write-Host '  手机  ：装 Tailscale 并登录后执行 deploy\tailscale-serve.ps1 获取地址' }
+else { Write-Host '  手机  ：没绑 Tailscale；双击 绑定Tailscale.cmd 可补绑' }
 Write-Host ("  日志  ：{0}" -f (Join-Path $script:Root 'logs'))
 $guidePath = Join-Path $script:Root '部署说明.md'
 if (-not (Test-Path -LiteralPath $guidePath)) { $guidePath = Join-Path $script:Root 'docs\部署说明.md' }

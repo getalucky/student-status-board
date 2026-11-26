@@ -41,6 +41,15 @@ function lanAddresses() {
   return [...new Set(result)];
 }
 
+function tailscaleUrl() {
+  try {
+    const text = fs.readFileSync(path.join(ROOT, 'logs', 'tailscale-url.txt'), 'utf8').trim();
+    return /^https:\/\/\S+$/.test(text) ? text : null;
+  } catch {
+    return null;
+  }
+}
+
 function printAccessUrls() {
   log(`本机访问：${URL}`);
   if (HOST === '0.0.0.0' || HOST === '::') {
@@ -52,6 +61,8 @@ function printAccessUrls() {
       log('没有检测到局域网 IPv4 地址，请检查 Wi-Fi 连接。');
     }
   }
+  const ts = tailscaleUrl();
+  if (ts) log(`跨网访问（手机开着 Tailscale 即可）：${ts}`);
 }
 
 
@@ -60,6 +71,8 @@ function saveAccessUrls() {
   if (HOST === '0.0.0.0' || HOST === '::') {
     for (const ip of lanAddresses()) lines.push(`局域网：http://${ip}:${PORT}`);
   }
+  const ts = tailscaleUrl();
+  if (ts) lines.push(`跨网：${ts}`);
   try {
     const dir = path.join(ROOT, 'logs');
     fs.mkdirSync(dir, { recursive: true });

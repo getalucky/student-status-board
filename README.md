@@ -258,7 +258,25 @@ Tailscale 开着时手机/电脑走 `https://<机器>.<tailnet>.ts.net`；Tailsc
 
 电信家宽 + 手机流量都有 IPv6，Tailscale 大概率 IPv6 直连；证书由 Tailscale 自动签发（Let's Encrypt DNS-01），不用域名、不用 Caddy、不用在路由器上放行任何入站端口。设备列表即白名单。
 
-### 6.2 一次性配置
+### 6.2 一条命令自动绑定（推荐）
+
+项目自己就能绑，不用手点 Tailscale：
+
+1. **tailnet 打开两个开关**（只做一次）：<https://login.tailscale.com/admin/dns> → **MagicDNS** + **HTTPS Certificates**
+2. **生成 auth key**（只做一次）：<https://login.tailscale.com/admin/settings/keys> → Generate auth key，勾 **Reusable** + **Pre-approved**，**不要 Ephemeral**（离线会被自动移除）
+3. **双击 `绑定Tailscale.cmd`**，粘贴 key（输入不回显）；没装 Tailscale 会自动静默安装
+
+命令行等价：
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\deploy\tailscale-bind.ps1 -AuthKey tskey-auth-xxx -Install
+```
+
+已经装好并登录同一 tailnet 的机器，不用 key，直接跑 `tailscale-bind.ps1`。
+
+脚本做的事：装（可选）→ `tailscale up --authkey` → `tailscale serve --bg http://127.0.0.1:3210` → 解析 DNSName 写进 `logs\tailscale-url.txt`。key 只在内存里用一次，不落盘、不进日志。启动器下次启动会多一行「跨网访问」。
+
+### 6.3 手动配置（了解原理即可）
 
 1. **家里电脑装 Tailscale**：<https://tailscale.com/download/windows>，安装后浏览器登录你的 tailnet。
 2. **在管理后台打开 HTTPS**（第一次必须做，否则 `tailscale serve` 报错）：
@@ -279,7 +297,7 @@ tailscale status --json | findstr DNSName
 
 5. **手机**：App Store / 应用商店装 Tailscale，登录**同一个账号**，然后 Safari / Chrome 打开上面那个 https 地址。建议「添加到主屏幕」，用起来像个 App。
 
-### 6.3 用脚本配（推荐）
+### 6.4 只配 serve（旧脚本）
 
 ```powershell
 cd D:\student-status-board
@@ -296,7 +314,7 @@ powershell -ExecutionPolicy Bypass -File .\deploy\tailscale-serve.ps1 -StatusOnl
 
 脚本行为：先确认 `tailscale` 已登录 → `tailscale serve --bg http://127.0.0.1:3210` → 检查本机端口是否真在监听（没在听会提醒你服务没起）→ 打印 `https://<机器名>.<tailnet>.ts.net` 和 `tailscale serve status`。
 
-### 6.4 验证与排障
+### 6.5 验证与排障
 
 ```powershell
 tailscale status                 # 看对端是 direct 还是 relay
@@ -571,7 +589,8 @@ JSON 结构（导入导出同一个 schema）：
 | `deploy/uninstall.ps1` | 停服务 + 删除服务/备份任务，默认保留 `data\`；可选清日志/运行时/Tailscale/数据 | 要（自动提权） |
 | `deploy/install-service.ps1` | 只注册/重配 `StudentBoard` 服务（老脚本，保留兼容） | 要 |
 | `deploy/uninstall-service.ps1` | 只停服务并从服务表移除（老脚本，保留兼容） | 要 |
-| `deploy/tailscale-serve.ps1` | `tailscale serve --bg http://127.0.0.1:3210`，打印 ts.net 地址，`-Reset` / `-StatusOnly` | 不要 |
+| `deploy/tailscale-bind.ps1` | **一条命令绑定 Tailscale**：装（可选）→ auth key 加入 tailnet → `serve` → 写 `logs\tailscale-url.txt`；key 不落盘。`绑定Tailscale.cmd` 是它的双击入口 | 装/登录要（自动提权），只配 serve 不要 |
+| `deploy/tailscale-serve.ps1` | 老脚本：只配 `tailscale serve --bg http://127.0.0.1:3210`，打印 ts.net 地址，`-Reset` / `-StatusOnly` | 不要 |
 | `deploy/backup-task.ps1` | 注册/删除每天 03:00 的备份任务，`-RunNow` 现场验证 | 要（S4U） |
 | `deploy/self-test.ps1` | 发布包/更新链路自测（临时目录，不碰真实 data/服务） | 不要 |
 | `deploy/allow-lan-firewall.ps1` | 放行本机局域网访问（`允许局域网访问.cmd` 调用，仅本地子网；主启动器首次用局域网时执行一次） | 要 |
@@ -745,7 +764,7 @@ powershell -ExecutionPolicy Bypass -File .\deploy\install.ps1
 - 在桌面创建「学生状态管理系统」快捷方式（指向 `启动学生状态管理系统.cmd`，双击启动）
 - 默认**不注册** Windows 服务、不开机自启；需要后台常驻时加 `-InstallService`（手动启动，仍是 0.0.0.0 + auto）
 - 监听 `HOST=0.0.0.0`、`COOKIE_SECURE=auto`，并自动放行防火墙 TCP 3210（仅 `LocalSubnet`）
-- 检测 Tailscale 并执行 `tailscale serve --bg http://127.0.0.1:3210`
+- 绑定 Tailscale：给了 `-TailscaleAuthKey` 就自动 `tailscale up` 加入 tailnet 并 `serve`；没给则用已登录状态，未登录只提示（双击 `绑定Tailscale.cmd` 可补）
 - 注册每天 03:00 的备份任务（`node scripts\backup.js --keep 7`）
 - 冒烟检查 `/api/healthz`（没有现成实例时临时起进程验证后关掉），打印手机 HTTPS 地址
 
@@ -756,10 +775,11 @@ powershell -ExecutionPolicy Bypass -File .\deploy\install.ps1
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\deploy\install.ps1 -Password "你的密码"
 powershell -ExecutionPolicy Bypass -File .\deploy\install.ps1 -DryRun          # 只看计划，不写任何东西
-powershell -ExecutionPolicy Bypass -File .\deploy\install.ps1 -SkipTailscale   # 先不配 Tailscale
+powershell -ExecutionPolicy Bypass -File .\deploy\install.ps1 -SkipTailscale   # 先不绑 Tailscale
+powershell -ExecutionPolicy Bypass -File .\deploy\install.ps1 -TailscaleAuthKey tskey-auth-xxx -InstallTailscale  # 顺手绑好跨网
 ```
 
-支持 `-SkipNodeInstall`、`-SkipDeps`、`-InstallService`、`-SkipShortcut`、`-SkipTailscale`、`-SkipBackupTask`、`-NodeVersion`、`-NodeMirror`、`-HealthTimeoutSec`。脚本幂等：重复执行 = 重新配置，不会重复建快捷方式/服务/任务，也不会重置已有密码和数据。
+支持 `-SkipNodeInstall`、`-SkipDeps`、`-InstallService`、`-SkipShortcut`、`-SkipTailscale`、`-TailscaleAuthKey`、`-InstallTailscale`、`-SkipBackupTask`、`-NodeVersion`、`-NodeMirror`、`-HealthTimeoutSec`。脚本幂等：重复执行 = 重新配置，不会重复建快捷方式/服务/任务，也不会重置已有密码和数据。
 
 ### 12.2 换电脑
 

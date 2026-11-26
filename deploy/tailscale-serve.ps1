@@ -144,6 +144,13 @@ if ($dnsName) {
     Write-Host "  $url" -ForegroundColor Green
     Write-Host ''
     Write-Host '  手机：装 Tailscale → 登录同一个 tailnet → Safari/Chrome 打开上面地址' -ForegroundColor DarkGray
+    try {
+        $logDir = Join-Path (Split-Path -Parent $PSScriptRoot) 'logs'
+        if (-not (Test-Path -LiteralPath $logDir)) { New-Item -ItemType Directory -Path $logDir -Force | Out-Null }
+        $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
+        [System.IO.File]::WriteAllText((Join-Path $logDir 'tailscale-url.txt'), $url + "`n", $utf8NoBom)
+        Write-Host '  启动器会读取 logs\tailscale-url.txt 显示这个地址' -ForegroundColor DarkGray
+    } catch { }
 }
 else {
     Write-Host '  在 https://login.tailscale.com/admin/machines 看这台机器的 DNSName' -ForegroundColor DarkGray

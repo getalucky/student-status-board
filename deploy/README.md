@@ -1,11 +1,12 @@
-﻿# deploy 目录说明（M5 封装与分发）
+# deploy 目录说明（M5 封装与分发）
 
 | 文件 | 用途 |
 | --- | --- |
 | `install.ps1` | **一键部署**：提权 → 检测/补 Node ≥22 → 装生产依赖 → 首次设密码 → 桌面一键启动快捷方式 → 防火墙（LocalSubnet）→ `tailscale serve` → 每日 03:00 备份 → 冒烟检查。默认不装开机自启服务，`-InstallService` 才注册（手动启动）。幂等，可重复跑 |
 | `uninstall.ps1` | 停服务 + 删服务/备份任务/桌面快捷方式，**数据保留**；可选删日志/运行时/Tailscale 规则 |
 | `install-service.ps1` / `uninstall-service.ps1` | 老版本只装/卸服务的脚本，保留兼容；一键部署请用 `install.ps1` / `uninstall.ps1` |
-| `tailscale-serve.ps1` | 单独配置 / 查看 `tailscale serve` |
+| `tailscale-bind.ps1` | **一条命令绑定 Tailscale**：没装就静默安装（winget/官方 MSI）→ 用 auth key 加入 tailnet → 配 `serve` → 把 `https://<机器>.<tailnet>.ts.net` 写进 `logs\tailscale-url.txt`。key 不落盘；`-StatusOnly` 只看状态 |
+| `tailscale-serve.ps1` | 老脚本：只配置 / 查看 `tailscale serve`，不碰安装和登录 |
 | `backup-task.ps1` | 单独注册每日备份任务（install.ps1 已内置同样的任务，可不用） |
 | `release.json` | 更新源配置：`repo`、`api_base`、`allow_local_updates`。发布前把 `owner/name` 改成真实 GitHub 仓库 |
 | `self-test.ps1` | 发布/更新链路自测（临时目录，不碰真实 data、不注册服务） |
@@ -26,8 +27,11 @@ powershell -ExecutionPolicy Bypass -File .\deploy\install.ps1
 -Password <密码>         首次初始化密码（不填交互输入）
 -SkipNodeInstall        不自动下载 Node（只接受本机已有 ≥22）
 -SkipDeps               跳过 node_modules 安装
--InstallService         额外注册 Windows 服务（手动启动，不开机自启）\n-SkipShortcut           不创建桌面快捷方式
--SkipTailscale          不配置 tailscale serve
+-InstallService         额外注册 Windows 服务（手动启动，不开机自启）
+-SkipShortcut           不创建桌面快捷方式
+-SkipTailscale          不绑定 Tailscale
+-TailscaleAuthKey <key>  Tailscale auth key，给了就无人值守加入 tailnet
+-InstallTailscale       没装 Tailscale 时自动静默安装
 -SkipBackupTask         不注册每日备份
 -DryRun                 只打印计划，不写任何东西
 ```
