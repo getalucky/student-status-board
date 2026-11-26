@@ -1,0 +1,57 @@
+{
+  "total": 10,
+  "pass": 10,
+  "fail": 0,
+  "results": [
+    {
+      "name": "导出全体：Content-Disposition / schema / version / students",
+      "status": "PASS",
+      "evidence": "schema=student-status-board/backup; version=1; students=2; attachment; filename=\"student-status-board-2026-11-26.json\""
+    },
+    {
+      "name": "导出全体：字段完整、反馈时间正序、每个学生生成最多 5 条",
+      "status": "PASS",
+      "evidence": "备份甲 feedbacks=2; generations=5; weekday=1"
+    },
+    {
+      "name": "导出：不含 api_key / app_settings / 模型设置",
+      "status": "PASS",
+      "evidence": "全文无 api_key / app_settings / base_url"
+    },
+    {
+      "name": "导出单个学生：只含目标学生 + 生成历史 5 条",
+      "status": "PASS",
+      "evidence": "studentId=1; students=1; generations=5"
+    },
+    {
+      "name": "导出单个不存在学生：404 NOT_FOUND",
+      "status": "PASS",
+      "evidence": "status=404 code=NOT_FOUND"
+    },
+    {
+      "name": "导入 new：同名同校也新建，原数据不清空",
+      "status": "PASS",
+      "evidence": "created=2; students 2->4; feedbacks=3; generations=5"
+    },
+    {
+      "name": "导入 overwrite 缺 confirm：400 CONFIRM_REQUIRED",
+      "status": "PASS",
+      "evidence": "status=400 code=CONFIRM_REQUIRED"
+    },
+    {
+      "name": "导入 overwrite + confirm：覆盖同名同校并替换反馈/生成",
+      "status": "PASS",
+      "evidence": "overwritten=2; 备份甲反馈已替换为「覆盖后的反馈」"
+    },
+    {
+      "name": "导入非法版本：400 INVALID_BACKUP",
+      "status": "PASS",
+      "evidence": "status=400 code=INVALID_BACKUP"
+    },
+    {
+      "name": "导入事务回滚：第二条非法，第一条也不入库",
+      "status": "PASS",
+      "evidence": "status=400; students 保持 4; 回滚甲未入库"
+    }
+  ]
+}

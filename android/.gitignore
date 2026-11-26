@@ -1,0 +1,18 @@
+# 构建产物与本地环境
+.gradle/
+build/
+app/build/
+local.properties
+*.iml
+.idea/
+.cxx/
+captures/
+
+# 签名材料：私钥与口令绝不进仓库
+keystore.properties
+keystore/
+*.jks
+*.keystore
+
+# 工具链临时目录
+.tools/

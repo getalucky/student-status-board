@@ -1,0 +1,5 @@
+{
+  "repo": "getalucky/student-status-board",
+  "api_base": "https://api.github.com",
+  "allow_local_updates": true
+}

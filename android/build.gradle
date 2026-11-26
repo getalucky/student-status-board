@@ -1,0 +1,8 @@
+// 根构建脚本：只声明 AGP 版本，插件在 app 模块里应用
+plugins {
+    id 'com.android.application' version '8.7.3' apply false
+}
+
+tasks.register('clean', Delete) {
+    delete rootProject.layout.buildDirectory
+}

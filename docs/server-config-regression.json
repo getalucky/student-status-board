@@ -1,0 +1,82 @@
+{
+  "total": 15,
+  "pass": 15,
+  "fail": 0,
+  "results": [
+    {
+      "name": "桌面：登录",
+      "status": "PASS",
+      "evidence": "http://192.168.1.5:3101/"
+    },
+    {
+      "name": "桌面：设置页 HTTP 明文传输警告",
+      "status": "PASS",
+      "evidence": "当前是 HTTP 提交 Key 会以明文经过局域网，正式使用请走 Tailscale HTTPS。"
+    },
+    {
+      "name": "桌面：保存 base_url / Key / 模型，状态显示已加密同步",
+      "status": "PASS",
+      "evidence": "toast=设置已保存并同步到服务器；pill=已加密同步到服务器；Key 输入已清空"
+    },
+    {
+      "name": "桌面：GET /api/llm/config 不含 api_key",
+      "status": "PASS",
+      "evidence": "{\"configured\":true,\"base_url\":\"https://127.0.0.1:4012/v1\",\"model\":\"mock-gpt-4o\",\"has_key\":true,\"updated_at\":1795618886723}"
+    },
+    {
+      "name": "桌面：SQLite app_settings 原值不含明文 Key",
+      "status": "PASS",
+      "evidence": "密文字段=v,iv,tag,data; 原文长度=202"
+    },
+    {
+      "name": "桌面与 SQLite 文件：明文 Key 不出现在 db/wal 字节里",
+      "status": "PASS",
+      "evidence": "app.db / app.db-wal 均未命中"
+    },
+    {
+      "name": "桌面：创建同步测试学生（周三）",
+      "status": "PASS",
+      "evidence": "id=1"
+    },
+    {
+      "name": "手机：同账号登录",
+      "status": "PASS",
+      "evidence": "http://192.168.1.5:3101/"
+    },
+    {
+      "name": "手机：设置页自动带出同一 base_url/model，Key 留空且状态已同步",
+      "status": "PASS",
+      "evidence": "base=https://127.0.0.1:4012/v1; model=mock-gpt-4o; key=空; 状态已同步; HTTP 警告存在"
+    },
+    {
+      "name": "手机：不填 Key 直接「测试连接」成功（服务器配置兜底）",
+      "status": "PASS",
+      "evidence": "连接成功 pong"
+    },
+    {
+      "name": "手机：HTTP 空 body 调 /api/llm/test 也走服务器配置",
+      "status": "PASS",
+      "evidence": "{\"ok\":true,\"model\":\"mock-gpt-4o\",\"content\":\"pong\",\"message\":\"pong\"}"
+    },
+    {
+      "name": "手机：录反馈后标签按 mock 模型更新",
+      "status": "PASS",
+      "evidence": "进步明显 / 专注度高 / 作业认真"
+    },
+    {
+      "name": "手机：生成 SSE 成功并落历史",
+      "status": "PASS",
+      "evidence": "输出 120 字；历史已出现"
+    },
+    {
+      "name": "手机：不传任何凭据调 /students/:id/generate 成功",
+      "status": "PASS",
+      "evidence": "status=200; start/delta/done 均出现; event: start | data: {\"weeks\":1,\"from\":1795363200000,\"to\":1795967999999,\"feedbacks\":1} |  | event: delta | data: {\"text\":\"孩子这段时间"
+    },
+    {
+      "name": "手机：本地存储不含明文 Key",
+      "status": "PASS",
+      "evidence": "无本地设置"
+    }
+  ]
+}

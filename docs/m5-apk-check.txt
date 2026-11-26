@@ -1,0 +1,70 @@
+﻿APK: D:\student-status-board\release\StudentStatusBoard-1.0.0.apk
+Size: 45957 bytes
+
+=== apksigner verify ===
+Verifies
+Verified using v1 scheme (JAR signing): false
+Verified using v2 scheme (APK Signature Scheme v2): true
+Verified using v3 scheme (APK Signature Scheme v3): true
+Verified using v3.1 scheme (APK Signature Scheme v3.1): false
+Verified using v4 scheme (APK Signature Scheme v4): false
+Verified for SourceStamp: false
+Number of signers: 1
+Signer #1 certificate DN: CN=Student Status Board, OU=Home, O=StudentBoard, L=Local, ST=Local, C=CN
+Signer #1 certificate SHA-256 digest: fffab6c784d413633c51001c0032c3a8677ff54450fd37fca7574b202a590a7a
+Signer #1 certificate SHA-1 digest: c166dc7d1a029a2e121b862edcc4741d476d0d44
+Signer #1 certificate MD5 digest: c3d5b432b8134bfe291d2051d9ec8c0e
+Signer #1 key algorithm: RSA
+Signer #1 key size (bits): 2048
+Signer #1 public key SHA-256 digest: 912a46914a97af53b46faca4089a8207a74003f0c6846804910f80269dc9a5ef
+Signer #1 public key SHA-1 digest: a39c593d8a3c15d5049d41b3d2679d319ad597e9
+Signer #1 public key MD5 digest: 7b2b3c1e9d036b54bbdfb929fdc10135
+
+=== aapt dump badging ===
+package: name='com.studentboard.app' versionCode='1' versionName='1.0.0' platformBuildVersionName='15' platformBuildVersionCode='35' compileSdkVersion='35' compileSdkVersionCodename='15'
+sdkVersion:'26'
+targetSdkVersion:'35'
+uses-permission: name='android.permission.INTERNET'
+application-label:'学生状态管理'
+application-icon-160:'res/BW.xml'
+application-icon-240:'res/BW.xml'
+application-icon-320:'res/BW.xml'
+application-icon-480:'res/BW.xml'
+application-icon-640:'res/BW.xml'
+application-icon-65534:'res/BW.xml'
+application: label='学生状态管理' icon='res/BW.xml'
+launchable-activity: name='com.studentboard.app.MainActivity'  label='' icon=''
+feature-group: label=''
+  uses-feature: name='android.hardware.faketouch'
+  uses-implied-feature: name='android.hardware.faketouch' reason='default feature for all apps'
+main
+supports-screens: 'small' 'normal' 'large' 'xlarge'
+supports-any-density: 'true'
+locales: '--_--'
+densities: '160' '240' '320' '480' '640' '65534'
+
+=== aapt manifest flags ===
+    A: android:versionCode(0x0101021b)=(type 0x10)0x1
+    A: android:versionName(0x0101021c)="1.0.0" (Raw: "1.0.0")
+    A: android:compileSdkVersionCodename(0x01010573)="15" (Raw: "15")
+    A: package="com.studentboard.app" (Raw: "com.studentboard.app")
+    A: platformBuildVersionCode=(type 0x10)0x23
+    A: platformBuildVersionName=(type 0x10)0xf
+    E: uses-permission (line=12)
+      A: android:allowBackup(0x01010280)=(type 0x12)0x0
+      A: android:usesCleartextTraffic(0x010104ec)=(type 0x12)0x0
+      A: android:networkSecurityConfig(0x01010527)=@0x7f050000
+
+=== source network_security_config.xml ===
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  只信任系统 CA：不打包用户证书，不信任自签，不允许明文。
+  Tailscale 的 ts.net 证书由 Let's Encrypt 签发，走系统根即可通过校验。
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="false">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+</network-security-config>

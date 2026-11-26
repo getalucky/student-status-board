@@ -1,0 +1,6 @@
+M5 备份 UI 补充证据（2026-11-26）
+- 设置页「备份与恢复」卡片：显示导出全部、选择 JSON 备份文件、冲突处理（新建/覆盖同名同校）、导入备份按钮；桌面截图 docs/screenshots/m5-backup-desktop.png
+- 导入摘要：学生 4、反馈 5、生成 6、导出时间 2026-11-26 09:42；选择「覆盖同名同校」后显示「我确认覆盖同名同校学生的反馈与生成历史」复选框；截图 docs/screenshots/m5-backup-import-confirm.png
+- 手机设置页：显示「手机端暂未开放备份导入导出，请在电脑端操作」；截图 docs/screenshots/m5-backup-mobile.png
+- 学生详情「导出该学生」按钮可下载单学生 JSON；截图 docs/screenshots/m5-backup-detail.png
+- 非法备份文件：版本 99 → 界面提示「备份文件版本不支持」；非 JSON → 「文件不是合法 JSON」；截图 docs/screenshots/m5-backup-error.png

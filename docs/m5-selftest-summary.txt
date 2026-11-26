@@ -1,0 +1,11 @@
+M5 发布/更新自测摘要（2026-11-26 09:44-09:47）
+命令：powershell -ExecutionPolicy Bypass -File .\deploy\self-test.ps1 -SkipPackage
+结果：全部 PASS，退出码 0
+
+通过项：
+- release\version.json 存在；zip 存在；zip sha256 / 大小与清单一致（版本 1.0.0，51 个文件，11.6 MB）
+- 解压包根识别；files_sha256 非空且逐文件匹配；含 web\dist\index.html；无 data\、无 logs\；含 better-sqlite3；不含 vite
+- update.ps1 -SelfTest semver 比较 / 包根识别全部通过
+- 端到端 0.9.0 → 1.1.0 正常更新：退出码 0；版本变为 1.1.0；data\、logs\ 未被影响；生成 backups\app-0.9.0
+- 坏包 1.1.0 → 1.1.1 回滚：退出码 1；回滚后版本 1.1.0；data\ 仍在；update.log 有回滚记录
+- sha256 篡改拦截：退出码 1；版本未变

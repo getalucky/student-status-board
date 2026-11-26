@@ -1,0 +1,62 @@
+﻿{
+    "generated_at":  "2026-11-26T09:49:54+08:00",
+    "test":  {
+                 "fail":  0,
+                 "command":  "npm.cmd test",
+                 "pass":  110,
+                 "total":  110
+             },
+    "build":  {
+                  "index_size":  805,
+                  "command":  "npm.cmd run build",
+                  "index":  "web/dist/index.html",
+                  "exit":  0
+              },
+    "release":  {
+                    "size":  12178963,
+                    "manifest_version":  "1.0.0",
+                    "manifest_file_count":  51,
+                    "has_better_sqlite3":  true,
+                    "manifest_zip_sha":  "7faeeca68685f1edab52113ce9478ea0b854d7d08fd9eb99a9678d9fa73f9cf6",
+                    "sha_match":  true,
+                    "checked_files":  51,
+                    "hash_mismatch":  0,
+                    "size_match":  true,
+                    "has_logs":  false,
+                    "has_data":  false,
+                    "path":  "D:\\student-status-board\\release\\student-status-board-1.0.0.zip",
+                    "has_vite":  false,
+                    "extracted_root":  "临时解压目录（已清理）",
+                    "missing":  0,
+                    "sha256":  "7faeeca68685f1edab52113ce9478ea0b854d7d08fd9eb99a9678d9fa73f9cf6"
+                },
+    "install_dry_run":  {
+                            "status":  "PASS",
+                            "note":  "deploy/install.ps1 -DryRun -NoElevate (release extracted dir); no service/data changes",
+                            "exit":  0
+                        },
+    "self_test":  {
+                      "status":  "PASS",
+                      "command":  "deploy/self-test.ps1 -SkipPackage",
+                      "note":  "zip sha / files_sha256 / no data/logs / better-sqlite3 / no vite / semver / update / rollback / tamper checks all PASS",
+                      "exit":  0
+                  },
+    "apk":  {
+                "permissions":  [
+                                    "android.permission.INTERNET"
+                                ],
+                "path":  "D:\\student-status-board\\release\\StudentStatusBoard-1.0.0.apk",
+                "size":  45957,
+                "signature":  {
+                                  "v3":  true,
+                                  "v1":  false,
+                                  "v2":  true
+                              },
+                "usesCleartextTraffic":  false,
+                "package":  "com.studentboard.app",
+                "targetSdk":  35,
+                "minSdk":  26,
+                "networkSecurityConfig":  true,
+                "versionName":  "1.0.0"
+            }
+}

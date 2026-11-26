@@ -1,0 +1,115 @@
+plugins {
+    id 'com.android.application'
+}
+
+// ---------------------------------------------------------------------------
+// 服务器地址：编译期可改。
+//   方式 A：android/local.properties 里加 serverUrl=...（本机私有，已被 gitignore）
+//   方式 B：命令行传 -PserverUrl=https://xxx.ts.net （优先于 A）
+//   方式 C：改 res/values/strings.xml 的 server_url（最后兜底，仓库里是占位符）
+// 壳内白名单会自动取该地址的 host，并放行其子域。
+// ---------------------------------------------------------------------------
+def localPropsFile = rootProject.file('local.properties')
+def localProps = new Properties()
+if (localPropsFile.exists()) { localPropsFile.withInputStream { localProps.load(it) } }
+def defaultServerUrl = 'https://your-machine.your-tailnet.ts.net'
+def serverUrlOverride = project.findProperty('serverUrl') ?: (localProps.getProperty('serverUrl') ?: defaultServerUrl)
+
+// 签名配置从 android/keystore.properties 读取；文件不存在时 release 不签名（只出 unsigned）
+def keystorePropsFile = rootProject.file('keystore.properties')
+def keystoreProps = new Properties()
+def hasKeystore = keystorePropsFile.exists()
+if (hasKeystore) {
+    keystorePropsFile.withInputStream { keystoreProps.load(it) }
+}
+
+android {
+    namespace 'com.studentboard.app'
+    compileSdk 35
+
+    defaultConfig {
+        applicationId 'com.studentboard.app'
+        // minSdk 26：Android 8.0 起系统 CA 才自带 ISRG Root X1（Let's Encrypt / ts.net 证书链）
+        minSdk 26
+        targetSdk 35
+        versionCode 1
+        versionName '1.0.0'
+
+        buildConfigField 'String', 'SERVER_URL', '"' + serverUrlOverride + '"'
+    }
+
+    buildFeatures {
+        buildConfig true
+    }
+
+    signingConfigs {
+        if (hasKeystore) {
+            release {
+                storeFile rootProject.file(keystoreProps['storeFile'] ?: 'keystore/student-board.jks')
+                storePassword keystoreProps['storePassword']
+                keyAlias keystoreProps['keyAlias']
+                keyPassword keystoreProps['keyPassword']
+                // v1/v2/v3 全开：v2 覆盖 Android 7+，v1 兼容老安装器，v3 支持密钥轮换
+                enableV1Signing true
+                enableV2Signing true
+                enableV3Signing true
+            }
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            shrinkResources false
+            if (hasKeystore) {
+                signingConfig signingConfigs.release
+            }
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+        debug {
+            applicationIdSuffix ''
+            minifyEnabled false
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    lint {
+        // 壳工程没有需要 lint 把关的逻辑，跳过 release 构建里的 lintVital（很慢）
+        checkReleaseBuilds false
+        abortOnError false
+    }
+}
+
+// assembleRelease 结束后把签名 APK 复制成 release/StudentStatusBoard-1.0.0.apk
+def releaseOutDir = rootProject.file('../release')
+def apkVersionName = '1.0.0'
+
+tasks.register('copyReleaseApk') {
+    doLast {
+        def src = layout.buildDirectory.file("outputs/apk/release/app-release.apk").get().asFile
+        if (!src.exists()) {
+            // 没配签名时产物名带 -unsigned
+            def alt = layout.buildDirectory.file("outputs/apk/release/app-release-unsigned.apk").get().asFile
+            if (alt.exists()) src = alt
+        }
+        if (!src.exists()) {
+            throw new GradleException("找不到 release APK，先跑 assembleRelease")
+        }
+        releaseOutDir.mkdirs()
+        def dst = new File(releaseOutDir, "StudentStatusBoard-${apkVersionName}.apk")
+        dst.bytes = src.bytes
+        println "APK copied -> ${dst.absolutePath} (${dst.length()} bytes)"
+    }
+}
+
+// 让 `gradlew assembleRelease` 一步到位产出 release/StudentStatusBoard-1.0.0.apk
+afterEvaluate {
+    tasks.named('assembleRelease').configure {
+        finalizedBy 'copyReleaseApk'
+    }
+}
+
