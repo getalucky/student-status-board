@@ -202,6 +202,44 @@ if (-not (Test-Path -LiteralPath $distIndex)) { throw "找不到前端产物 $di
 Write-Log "服务入口：$entry"
 
 # ---------------------------------------------------------------- Node
+function Expand-ZipArchive {
+    <#
+      解压 zip，不依赖 PowerShell 的 Archive 模块。
+      Windows Sandbox / 精简系统里 Expand-Archive 常常「找到命令但模块加载不了」，
+      所以优先用 .NET 自带 ZipFile，其次系统自带 tar.exe，最后才退回 Expand-Archive。
+    #>
+    param([string]$ZipPath, [string]$Destination)
+    if (-not (Test-Path -LiteralPath $ZipPath)) { throw "找不到压缩包：$ZipPath" }
+    if (Test-Path -LiteralPath $Destination) { Remove-Item -LiteralPath $Destination -Recurse -Force }
+    New-Item -ItemType Directory -Path $Destination -Force | Out-Null
+
+    try {
+        Add-Type -AssemblyName System.IO.Compression.FileSystem -ErrorAction Stop
+        [System.IO.Compression.ZipFile]::ExtractToDirectory($ZipPath, $Destination)
+        return
+    } catch {
+        Write-Log ("ZipFile 解压失败：{0}" -f $_.Exception.Message) 'WARN'
+        if (Test-Path -LiteralPath $Destination) { Remove-Item -LiteralPath $Destination -Recurse -Force -ErrorAction SilentlyContinue }
+        New-Item -ItemType Directory -Path $Destination -Force | Out-Null
+    }
+
+    $tarExe = Join-Path $env:SystemRoot 'System32\tar.exe'
+    if (Test-Path -LiteralPath $tarExe) {
+        & $tarExe -xf $ZipPath -C $Destination 2>&1 | Out-Null
+        if ($LASTEXITCODE -eq 0) { return }
+        Write-Log ("tar 解压失败（退出码 {0}）" -f $LASTEXITCODE) 'WARN'
+        if (Test-Path -LiteralPath $Destination) { Remove-Item -LiteralPath $Destination -Recurse -Force -ErrorAction SilentlyContinue }
+        New-Item -ItemType Directory -Path $Destination -Force | Out-Null
+    }
+
+    try {
+        Import-Module Microsoft.PowerShell.Archive -ErrorAction Stop
+        Expand-Archive -LiteralPath $ZipPath -DestinationPath $Destination -Force
+    } catch {
+        throw ("没有可用的解压方式（ZipFile / tar / Expand-Archive 都失败）：{0}" -f $_.Exception.Message)
+    }
+}
+
 function Get-NodeMajor {
     param([string]$Exe)
     $v = (& $Exe -v) -join ''
@@ -229,7 +267,7 @@ function Install-NodeRuntime {
     if (-not (Test-Path -LiteralPath $zipPath)) { throw "Node 下载失败：$url" }
     if (Test-Path -LiteralPath $extractDir) { Remove-Item -LiteralPath $extractDir -Recurse -Force }
     Write-Log '解压 Node…'
-    Expand-Archive -LiteralPath $zipPath -DestinationPath $extractDir -Force
+    Expand-ZipArchive -ZipPath $zipPath -Destination $extractDir
     $inner = Get-ChildItem -LiteralPath $extractDir -Directory | Select-Object -First 1
     if (-not $inner) { throw "Node zip 结构异常：$zipPath" }
     if (Test-Path -LiteralPath $nodeDir) { Remove-Item -LiteralPath $nodeDir -Recurse -Force }
@@ -445,7 +483,7 @@ function Resolve-NssmPath {
         [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12
         Invoke-WebRequest -Uri 'https://nssm.cc/release/nssm-2.24.zip' -OutFile $zipPath -UseBasicParsing -TimeoutSec 300
         if (Test-Path -LiteralPath $extractDir) { Remove-Item -LiteralPath $extractDir -Recurse -Force }
-        Expand-Archive -LiteralPath $zipPath -DestinationPath $extractDir -Force
+        Expand-ZipArchive -ZipPath $zipPath -Destination $extractDir
         $candidate = Join-Path $extractDir 'nssm-2.24\win64\nssm.exe'
         if (-not (Test-Path -LiteralPath $candidate)) { $candidate = (Get-ChildItem -LiteralPath $extractDir -Recurse -Filter 'nssm.exe' | Where-Object { $_.FullName -like '*win64*' } | Select-Object -First 1).FullName }
         $dest = Join-Path $Root 'deploy\nssm.exe'

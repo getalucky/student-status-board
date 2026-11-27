@@ -1,8 +1,8 @@
 @echo off
+chcp 65001 >nul
 setlocal EnableExtensions EnableDelayedExpansion
 title 学生状态管理系统
 cd /d "%~dp0"
-chcp 65001 >nul
 
 rem 统一入口。不带参数 = 菜单；带参数 = 直接执行某一项后退出
 if /i "%~1"=="/start"     set "SSB_DIRECT=1" & goto do_start

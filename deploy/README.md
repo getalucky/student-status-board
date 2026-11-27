@@ -5,6 +5,7 @@
 | `install.ps1` | **一键部署**：提权 → 检测/补 Node ≥22 → 装生产依赖 → 首次设密码 → 桌面一键启动快捷方式 → 防火墙（LocalSubnet）→ `tailscale serve` → 每日 03:00 备份 → 冒烟检查。默认不装开机自启服务，`-InstallService` 才注册（手动启动）。幂等，可重复跑 |
 | `uninstall.ps1` | 停服务 + 删服务/备份任务/桌面快捷方式，**数据保留**；可选删日志/运行时/Tailscale 规则 |
 | `install-service.ps1` / `uninstall-service.ps1` | 老版本只装/卸服务的脚本，保留兼容；一键部署请用 `install.ps1` / `uninstall.ps1` |
+| `deploy-ui.ps1` | 一键部署的交互层（确认 / 提权 / 调 `install.ps1` / 问要不要启动），被根目录 `一键部署.cmd` 调用；中文提示都放这里，`.cmd` 保持纯 ASCII |
 | `tailscale-bind.ps1` | **一条命令绑定 Tailscale**：没装就静默安装（winget/官方 MSI）→ 用 auth key 加入 tailnet → 配 `serve` → 把 `https://<机器>.<tailnet>.ts.net` 写进 `logs\tailscale-url.txt`。key 不落盘；`-StatusOnly` 只看状态 |
 | `tailscale-serve.ps1` | 老脚本：只配置 / 查看 `tailscale serve`，不碰安装和登录 |
 | `backup-task.ps1` | 单独注册每日备份任务（install.ps1 已内置同样的任务，可不用） |

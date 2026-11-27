@@ -798,6 +798,8 @@ npm.cmd run build
 
 它其实只是 `deploy\install.ps1` 的壳：负责检查是不是在解压后的目录里、确认一次、用管理员权限重启自己，然后把活全交给 `install.ps1`。
 
+> Windows 沙盒 / 精简系统上 Expand-Archive 常常加载不了模块。1.2.2 起解压优先用 .NET ZipFile，失败退 	ar.exe，最后才用 Expand-Archive；一键部署.cmd 本身保持纯 ASCII（中文提示都在 deploy\deploy-ui.ps1），避免 cmd 切代码页后把批处理读错位。
+
 想自己控制参数时（管理员 PowerShell）：
 
 ```powershell
