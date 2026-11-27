@@ -431,7 +431,7 @@ $startedProcess = $null
 $serviceExisted = $false
 $githubFailed = $false
 $preserved = @{}
-$items = @('server', 'shared', 'scripts', 'tools', 'deploy', 'web\dist', 'node_modules', 'package.json', 'package-lock.json', 'version.json', 'README.md', '学生状态管理系统.cmd')
+$items = @('server', 'shared', 'scripts', 'tools', 'deploy', 'web\dist', 'node_modules', 'package.json', 'package-lock.json', 'version.json', 'README.md', '学生状态管理系统.cmd', '一键部署.cmd')
 $tempFiles = New-Object System.Collections.ArrayList
 
 try {

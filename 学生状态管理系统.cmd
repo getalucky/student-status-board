@@ -12,9 +12,10 @@ if /i "%~1"=="/tailscale" set "SSB_DIRECT=1" & goto do_tailscale
 if /i "%~1"=="/lan"       set "SSB_DIRECT=1" & goto do_lan
 if /i "%~1"=="/update"    set "SSB_DIRECT=1" & goto do_update
 if /i "%~1"=="/lantest"   set "SSB_DIRECT=1" & goto do_lantest
+if /i "%~1"=="/deploy"    goto deploy_passthru
 if not "%~1"=="" (
   echo 未知参数：%~1
-  echo 可用：/start /stop /reset /tailscale /lan /update /lantest
+  echo 可用：/start /stop /reset /tailscale /lan /update /lantest /deploy
   if not defined SSB_NO_PAUSE pause
   exit /b 1
 )
@@ -38,11 +39,13 @@ echo        4   绑定 Tailscale（跨网访问）
 echo        5   允许局域网访问（防火墙）
 echo        6   检查更新
 echo        7   局域网测试模式
+echo        8   一键部署 / 修复安装
 echo        0   退出
 echo    ==============================================
 echo.
-choice /c 12345670 /n /m "   请选择 [1-7, 0 退出]: "
-if errorlevel 8 goto do_exit
+choice /c 123456780 /n /m "   请选择 [1-8, 0 退出]: "
+if errorlevel 9 goto do_exit
+if errorlevel 8 goto do_deploy
 if errorlevel 7 goto do_lantest
 if errorlevel 6 goto do_update
 if errorlevel 5 goto do_lan
@@ -86,6 +89,20 @@ goto done
 cls
 call "%~dp0tools\局域网测试模式.cmd"
 goto done
+
+:do_deploy
+cls
+call "%~dp0一键部署.cmd"
+goto done
+
+:deploy_passthru
+rem /deploy 后面跟的参数原样转给 一键部署.cmd（最多 8 个）
+set "SSB_NO_PAUSE="
+set "SSB_DPARGS=%~2 %~3 %~4 %~5 %~6 %~7 %~8 %~9"
+call "%~dp0一键部署.cmd" %SSB_DPARGS%
+set "SSB_RC=%ERRORLEVEL%"
+set "SSB_DPARGS="
+exit /b %SSB_RC%
 
 :done
 if defined SSB_DIRECT (

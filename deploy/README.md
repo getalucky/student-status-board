@@ -13,7 +13,9 @@
 
 ## 一键部署
 
-管理员 PowerShell：
+新电脑推荐双击根目录 **`一键部署.cmd`**：检查是否已解压 → 确认 → 自动提权 → 跑 `install.ps1` → 问要不要立刻启动。它只是下面这个脚本的壳。
+
+管理员 PowerShell（等价，自己控参数）：
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\deploy\install.ps1
