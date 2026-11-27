@@ -462,25 +462,32 @@ function New-DesktopShortcut {
 $cmdExt = [string][char]46 + 'cmd'
 $launcherFile = "学生状态管理系统$cmdExt"
 
+# 历史版本曾在桌面多建两个快捷方式（启动 / 重置密码），现在只留一个启动入口；
+# 重跑部署（老机器修复/升级）时把历史遗留的两个清掉，存在才删，删失败只 WARN 不中断。
+$legacyShortcutNames = @('启动学生状态管理系统.lnk', '重置登录密码.lnk')
+
 if ($SkipShortcut) {
     Write-Log '跳过桌面快捷方式（-SkipShortcut）' 'WARN'
 } elseif ($DryRun) {
-    Write-Log "[dry-run] 将在桌面创建「学生状态管理系统」快捷方式 → $launcherFile（不带参数，打开菜单）"
-    Write-Log "[dry-run] 同时创建「启动学生状态管理系统」快捷方式 → $launcherFile /start"
-    Write-Log "[dry-run] 同时创建「重置登录密码」快捷方式 → $launcherFile /reset"
+    Write-Log "[dry-run] 将创建「学生状态管理系统」快捷方式 → $launcherFile /start"
 } else {
-    $shortcuts = @(
-        @{ Name = '学生状态管理系统'; Args = ''; Desc = '学生状态管理系统 · 打开菜单' },
-        @{ Name = '启动学生状态管理系统'; Args = '/start'; Desc = '学生状态管理系统 · 一键启动' },
-        @{ Name = '重置登录密码'; Args = '/reset'; Desc = '忘记密码时重置登录密码' }
-    )
-    foreach ($s in $shortcuts) {
-        try {
-            $lnk = New-DesktopShortcut -Root $script:Root -Name $s.Name -TargetFile $launcherFile -Arguments $s.Args -Description $s.Desc
-            Write-Log ("桌面快捷方式已创建：{0}" -f $lnk) 'OK'
-        } catch {
-            Write-Log ("快捷方式「{0}」创建失败：{1}" -f $s.Name, $_.Exception.Message) 'WARN'
+    $desktop = [Environment]::GetFolderPath('Desktop')
+    foreach ($name in $legacyShortcutNames) {
+        $legacyLnk = Join-Path $desktop $name
+        if (Test-Path -LiteralPath $legacyLnk) {
+            try {
+                Remove-Item -LiteralPath $legacyLnk -Force
+                Write-Log ("已清理历史遗留快捷方式：{0}" -f $legacyLnk) 'OK'
+            } catch {
+                Write-Log ("清理历史遗留快捷方式失败：{0}（{1}）" -f $legacyLnk, $_.Exception.Message) 'WARN'
+            }
         }
+    }
+    try {
+        $lnk = New-DesktopShortcut -Root $script:Root -Name '学生状态管理系统' -TargetFile $launcherFile -Arguments '/start' -Description '打开学生状态管理系统'
+        Write-Log ("桌面快捷方式已创建：{0}" -f $lnk) 'OK'
+    } catch {
+        Write-Log ("快捷方式「学生状态管理系统」创建失败：{0}" -f $_.Exception.Message) 'WARN'
     }
 }
 

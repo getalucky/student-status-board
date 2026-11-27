@@ -115,12 +115,11 @@ Node 没在 PATH 里时，把命令里的 `node.exe` / `npm.cmd` 换成实际安
 - **`学生状态管理系统.cmd`** —— 日常唯一入口，双击出菜单：
 
 ```
-1  启动 / 打开界面        5  允许局域网访问（防火墙）
-2  停止服务              6  检查更新
-3  重置登录密码           7  局域网测试模式
-4  绑定 Tailscale         8  一键部署 / 修复安装
-0  退出
+1  启动 / 打开界面        3  更多功能
+2  停止服务              0  退出
 ```
+
+「更多功能」里折叠低频项：重置登录密码、检查更新、允许局域网访问（防火墙）、局域网测试、绑定 Tailscale、一键部署 / 修复安装。
 
 菜单顶部实时显示服务状态和 `http://127.0.0.1:3210`。每一项执行完回到菜单，不会关窗口。
 
@@ -156,16 +155,16 @@ Node 没在 PATH 里时，把命令里的 `node.exe` / `npm.cmd` 换成实际安
 主启动器已经内置局域网支持，一般不需要额外操作：
 
 1. 菜单按 `1` 启动（已在跑则跳过）；
-2. 首次在新电脑上用局域网，菜单按 `5`（`tools\允许局域网访问.cmd`），按 UAC 确认放行防火墙（规则只允许 `LocalSubnet`，即本地子网，不暴露到公网）；
+2. 首次在新电脑上用局域网，菜单「更多功能」→ 允许局域网访问（`tools\允许局域网访问.cmd`），按 UAC 确认放行防火墙（规则只允许 `LocalSubnet`，即本地子网，不暴露到公网）；
 3. 手机连同一个 Wi-Fi，访问启动窗口打印的 `http://<电脑局域网 IP>:3210`。`ipconfig` 里看 IPv4 地址，启动器也会自动列出可用地址。
 
-菜单里的 `7 局域网测试模式` 是排障用的（`COOKIE_SECURE=false`，HTTP 下也写 Cookie）；日常使用用第 `1` 项即可。
+菜单「更多功能」里的局域网测试是排障用的（`COOKIE_SECURE=false`，HTTP 下也写 Cookie）；日常使用用第 `1` 项即可。
 
 手机和电脑共用服务器配置，一处保存另一端自动生效；但局域网 HTTP 下提交 Key 会以明文经过 Wi-Fi（没有 TLS），仅适合临时/同 Wi-Fi 使用，正式跨网请走 §6 的 Tailscale HTTPS。
 
 ### 3.7 忘记登录密码
 
-菜单按 `3`（或双击桌面「重置登录密码」快捷方式，等价于 `学生状态管理系统.cmd /reset`）：
+菜单「更多功能」→ 重置登录密码（等价于 `学生状态管理系统.cmd /reset`）：
 
 1. 输入 `RESET` 确认；
 2. 输入新密码两遍（至少 6 位）；
@@ -292,7 +291,7 @@ Tailscale 开着时手机/电脑走 `https://<机器>.<tailnet>.ts.net`；Tailsc
 
 1. **tailnet 打开两个开关**（只做一次）：<https://login.tailscale.com/admin/dns> → **MagicDNS** + **HTTPS Certificates**
 2. **生成 auth key**（只做一次）：<https://login.tailscale.com/admin/settings/keys> → Generate auth key，勾 **Reusable** + **Pre-approved**，**不要 Ephemeral**（离线会被自动移除）
-3. **菜单按 `4`（`tools\绑定Tailscale.cmd`）**，粘贴 key（输入不回显）；没装 Tailscale 会自动静默安装
+3. **菜单「更多功能」→ 绑定 Tailscale（`tools\绑定Tailscale.cmd`）**，粘贴 key（输入不回显）；没装 Tailscale 会自动静默安装
 
 命令行等价：
 
@@ -798,7 +797,7 @@ npm.cmd run build
 
 它其实只是 `deploy\install.ps1` 的壳：负责检查是不是在解压后的目录里、确认一次、用管理员权限重启自己，然后把活全交给 `install.ps1`。
 
-> **Windows 沙盒 / 精简系统**：解压 zip 再双击 `一键部署.cmd`。沙盒里 `Expand-Archive` 常常「找得到命令但模块加载不了」，1.2.3 起解压改成先用 .NET `ZipFile`、再退 `tar.exe`、最后才用 `Expand-Archive`；另外 `@node-rs/argon2` 的原生模块依赖 VC++ 运行时（`VCRUNTIME140.dll` / `VCRUNTIME140_1.dll`），沙盒镜像里没有，安装时会从 `deploy\vcrt\` 自动补到 node.exe 旁和原生模块目录。`一键部署.cmd` 本身保持纯 ASCII，中文提示都在 `deploy\deploy-ui.ps1`，避免 cmd 切代码页后把批处理读错位。
+> **Windows 沙盒 / 精简系统**：解压 zip 再双击 `一键部署.cmd` 即可，这些兼容处理 1.2.1 已内置、正常电脑无感，不需要单独装版本或打补丁——解压不依赖 `Expand-Archive`（.NET `ZipFile` → `tar.exe` → `Expand-Archive` 兜底）；`@node-rs/argon2` 缺的 VC++ 运行时（`VCRUNTIME140.dll` / `VCRUNTIME140_1.dll`）会自动从 `deploy\vcrt\` 补到 node.exe 旁和原生模块目录；`一键部署.cmd` 保持纯 ASCII，中文提示都在 `deploy\deploy-ui.ps1`，避免切代码页读错位。
 
 想自己控制参数时（管理员 PowerShell）：
 
@@ -813,10 +812,10 @@ powershell -ExecutionPolicy Bypass -File .\deploy\install.ps1
 - 检测 Node.js ≥ 22；没有就从 npmmirror 下载 `v24.22.1` 免安装 zip 到 `runtime\node` 并使用
 - `node_modules` 缺失才 `npm.cmd ci --omit=dev --ignore-scripts`，并自检 `better-sqlite3` 能加载
 - 首次运行（`data\config.json` 不存在）时执行 `scripts/init.js` 设置登录密码
-- 在桌面创建三个快捷方式：`学生状态管理系统`（打开菜单）、`启动学生状态管理系统`（`/start`）、`重置登录密码`（`/reset`），全部指向根目录唯一的 `学生状态管理系统.cmd`
+- 在桌面创建一个「学生状态管理系统」快捷方式（打开即启动，等价于 `学生状态管理系统.cmd /start`）
 - 默认**不注册** Windows 服务、不开机自启；需要后台常驻时加 `-InstallService`（手动启动，仍是 0.0.0.0 + auto）
 - 监听 `HOST=0.0.0.0`、`COOKIE_SECURE=auto`，并自动放行防火墙 TCP 3210（仅 `LocalSubnet`）
-- 绑定 Tailscale：给了 `-TailscaleAuthKey` 就自动 `tailscale up` 加入 tailnet 并 `serve`；没给则用已登录状态，未登录只提示（菜单 `4` 可补）
+- 绑定 Tailscale：给了 `-TailscaleAuthKey` 就自动 `tailscale up` 加入 tailnet 并 `serve`；没给则用已登录状态，未登录只提示（菜单「更多功能」→ 绑定 Tailscale 可补）
 - 注册每天 03:00 的备份任务（`node scripts\backup.js --keep 7`）
 - 冒烟检查 `/api/healthz`（没有现成实例时临时起进程验证后关掉），打印手机 HTTPS 地址
 
@@ -878,7 +877,7 @@ powershell -ExecutionPolicy Bypass -File .\deploy\uninstall.ps1
 
 ### 13.2 本机检查更新
 
-菜单按 `6`（`tools\检查更新.cmd`，管理员会由 `update.ps1` 自动请求提权），流程：
+菜单「更多功能」→ 检查更新（`tools\检查更新.cmd`，管理员会由 `update.ps1` 自动请求提权），流程：
 
 1. 读本地 `version.json`，查 GitHub latest release 的 `version.json`，semver 比较，不新直接退出
 2. 下载 zip → 校验 `sha256` → 解压 → 按包内 `version.json` 的 `files_sha256` 逐文件校验
@@ -901,7 +900,7 @@ powershell -ExecutionPolicy Bypass -File .\scripts\update.ps1 -LocalOnly   # 只
 
 1. 在能上网的机器下载同一版本的 `student-status-board-<ver>.zip` 和 `release\version.json`。
 2. 把两个文件放进安装目录的 `updates\`（`version.json` 里的 `zip.file` 指向 zip 名；直接放 zip 且包内有 `version.json` 也能识别）。
-3. 菜单按 `6`（或 `tools\检查更新.cmd`）；脚本会跳过 GitHub，直接用本地包。也可以显式指定：
+3. 菜单「更多功能」→ 检查更新（或 `tools\检查更新.cmd`）；脚本会跳过 GitHub，直接用本地包。也可以显式指定：
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\scripts\update.ps1 -PackagePath .\updates\student-status-board-1.0.1.zip -VersionFile .\updates\version.json
