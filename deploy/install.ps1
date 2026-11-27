@@ -311,6 +311,39 @@ Write-Log "Node：$nodeExe ($nodeVersionText)" 'OK'
 $nodeDir = Split-Path -Parent $nodeExe
 if ($env:PATH -notlike ('*' + $nodeDir + '*')) { $env:PATH = $nodeDir + ';' + $env:PATH }
 
+# ---------------------------------------------------------------- VC 运行时
+# @node-rs/argon2 的 .node 依赖 VCRUNTIME140 / VCRUNTIME140_1（VC++ 运行时）。
+# Windows Sandbox、精简版系统里系统目录没有这两个 DLL，加载会失败
+# （报 "Cannot find native binding"，argon2 的 index.js 直接 throw）。
+# 包里自带一份，缺的时候放到两个地方：
+#   1) node.exe 旁边（按应用目录搜索时命中）
+#   2) 原生模块自己的目录（node 用 LOAD_WITH_ALTERED_SEARCH_PATH 加载 .node 时优先搜这里）
+function Install-VcRuntime {
+    param([string]$NodeDir, [string]$Root)
+    $src = Join-Path $Root 'deploy\vcrt'
+    if (-not (Test-Path -LiteralPath $src)) { return }
+    $targets = New-Object System.Collections.ArrayList
+    [void]$targets.Add($NodeDir)
+    $nodeModules = Join-Path $Root 'node_modules\@node-rs'
+    if (Test-Path -LiteralPath $nodeModules) {
+        foreach ($d in Get-ChildItem -LiteralPath $nodeModules -Directory) {
+            if (Get-ChildItem -LiteralPath $d.FullName -Filter '*.node' -File -ErrorAction SilentlyContinue) {
+                [void]$targets.Add($d.FullName)
+            }
+        }
+    }
+    $copied = 0
+    foreach ($t in $targets) {
+        foreach ($f in Get-ChildItem -LiteralPath $src -Filter '*.dll' -File) {
+            $dst = Join-Path $t $f.Name
+            if (Test-Path -LiteralPath $dst) { continue }
+            try { Copy-Item -LiteralPath $f.FullName -Destination $dst -Force; $copied++ } catch { }
+        }
+    }
+    if ($copied -gt 0) { Write-Log ("补齐 VC 运行时：{0} 个 DLL（node.exe 旁 + 原生模块目录）" -f $copied) 'OK' }
+}
+if (-not $DryRun) { Install-VcRuntime -NodeDir $nodeDir -Root $script:Root }
+
 $npmCmd = Join-Path $nodeDir 'npm.cmd'
 if (-not (Test-Path -LiteralPath $npmCmd)) {
     $npmCmdCmd = Get-Command npm.cmd -ErrorAction SilentlyContinue
@@ -322,13 +355,27 @@ if ($null -ne $npmCmd) { Write-Log "npm ：$npmCmd" } else { Write-Log '找不�
 Write-Log '检查生产依赖 node_modules'
 $bsq = Join-Path $script:Root 'node_modules\better-sqlite3'
 $needInstall = -not (Test-Path -LiteralPath $bsq)
+$probeOutput = ''
 if (-not $needInstall) {
     if (-not $DryRun) {
+        # 注意：node 往 stderr 写东西时，$ErrorActionPreference='Stop' 会把它当终止错误，
+        # 这里临时放宽，只看退出码，同时把输出留下来好定位。
+        $oldEap = $ErrorActionPreference
+        $ErrorActionPreference = 'Continue'
         Push-Location $script:Root
-        try { & $nodeExe -e "const D=require('better-sqlite3');new D(':memory:').close();require('@node-rs/argon2').hash('x').then(()=>process.exit(0))" 2>$null }
-        finally { Pop-Location }
-        if ($LASTEXITCODE -ne 0) {
-            Write-Log '现有 node_modules 加载 better-sqlite3 失败，重新安装' 'WARN'
+        try {
+            $probeOutput = (& $nodeExe -e "const D=require('better-sqlite3');new D(':memory:').close();require('@node-rs/argon2').hash('x').then(()=>process.exit(0),()=>process.exit(3))" 2>&1 | Out-String)
+            $probeCode = $LASTEXITCODE
+        } finally {
+            Pop-Location
+            $ErrorActionPreference = $oldEap
+        }
+        if ($probeCode -ne 0) {
+            Write-Log ("现有 node_modules 加载原生模块失败（退出码 {0}），重新安装依赖" -f $probeCode) 'WARN'
+            if (-not [string]::IsNullOrWhiteSpace($probeOutput)) {
+                $firstLines = ($probeOutput -split "`r?`n" | Where-Object { $_.Trim() -ne '' } | Select-Object -First 3) -join ' / '
+                Write-Log ("加载失败原因：{0}" -f $firstLines) 'WARN'
+            }
             $needInstall = $true
         }
     }
@@ -351,6 +398,8 @@ if ($SkipDeps) {
                 if ($LASTEXITCODE -ne 0) { throw "npm ci 失败（退出码 $LASTEXITCODE）" }
             }
         } finally { Pop-Location }
+        # npm ci 会重建 node_modules，原生模块目录里的 VC 运行时得再补一次
+        Install-VcRuntime -NodeDir $nodeDir -Root $script:Root
         Push-Location $script:Root
         try { & $nodeExe -e "const D=require('better-sqlite3');new D(':memory:').close()" }
         finally { Pop-Location }
