@@ -6,8 +6,8 @@
     一次跑完：
       1. 构建前端（TEMP/TMP 指到 .tmp-build，绕开 esbuild 清临时文件被拦的坑）
       2. 在 release\student-status-board-<ver>\ 组装发布目录：
-         server/  shared/  scripts/  deploy/  web/dist/  package.json  package-lock.json
-         version.json  README.md  检查更新.cmd
+         server/  shared/  scripts/  tools/  deploy/  web/dist/  package.json  package-lock.json
+         version.json  README.md  学生状态管理系统.cmd  tools\
       3. 装生产依赖：默认复制本机已验证的 node_modules 再 npm prune --omit=dev 剔除 dev；
          -FreshInstall 时改用 npm.cmd ci --omit=dev --ignore-scripts 全新安装。
          两条路都会在装完后真实 require 一次 better-sqlite3 / @node-rs/argon2 做自检。
@@ -275,6 +275,7 @@ Write-Log '复制程序文件'
 Invoke-Robocopy (Join-Path $root 'server') (Join-Path $stage 'server')
 Invoke-Robocopy (Join-Path $root 'shared') (Join-Path $stage 'shared')
 Invoke-Robocopy (Join-Path $root 'scripts') (Join-Path $stage 'scripts')
+Invoke-Robocopy (Join-Path $root 'tools') (Join-Path $stage 'tools')
 Invoke-Robocopy (Join-Path $root 'deploy') (Join-Path $stage 'deploy') -ExcludeFiles @('nssm.exe', '*.log')
 Invoke-Robocopy (Join-Path $root 'web\dist') (Join-Path $stage 'web\dist')
 
@@ -289,7 +290,7 @@ if (Test-Path -LiteralPath $deployGuide) {
 } else {
     Write-Log '警告：docs\部署说明.md 不存在，发布包将不带部署说明。' 'WARN'
 }
-$cmdFiles = Get-ChildItem -LiteralPath $root -Filter '*.cmd' -File
+$cmdFiles = @(Get-ChildItem -LiteralPath $root -Filter '*.cmd' -File)
 if ($cmdFiles.Count -eq 0) {
     Write-Log '警告：根目录没有 .cmd 入口，发布包将不带双击启动/停止/重置密码。' 'WARN'
 } else {
@@ -297,7 +298,7 @@ if ($cmdFiles.Count -eq 0) {
         Copy-Item -LiteralPath $cmd.FullName -Destination (Join-Path $stage $cmd.Name) -Force
     }
 }
-Write-Log ("已复制：server / shared / scripts / deploy / web/dist / package.json / package-lock.json / README.md / 部署说明.md / {0} 个 .cmd" -f $cmdFiles.Count)
+Write-Log ("已复制：server / shared / scripts / tools / deploy / web/dist / package.json / package-lock.json / README.md / 部署说明.md / {0} 个 .cmd" -f $cmdFiles.Count)
 
 # ================================================================ 3. 生产依赖
 $stageNodeModules = Join-Path $stage 'node_modules'

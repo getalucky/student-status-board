@@ -15,7 +15,7 @@
       6. 起服务，30 秒内 /api/healthz 不通或进程退出 → 停服、回滚、重起
       7. 每一步写 logs\update.log
 
-    手动触发，绝不静默升级。双击根目录「检查更新.cmd」即可。
+    手动触发，绝不静默升级。在 学生状态管理系统.cmd 菜单按 6 即可。
 
 .PARAMETER ProjectRoot
     要更新的安装目录，默认本脚本上一级。
@@ -431,7 +431,7 @@ $startedProcess = $null
 $serviceExisted = $false
 $githubFailed = $false
 $preserved = @{}
-$items = @('server', 'shared', 'scripts', 'deploy', 'web\dist', 'node_modules', 'package.json', 'package-lock.json', 'version.json', 'README.md', '检查更新.cmd', '绑定Tailscale.cmd')
+$items = @('server', 'shared', 'scripts', 'tools', 'deploy', 'web\dist', 'node_modules', 'package.json', 'package-lock.json', 'version.json', 'README.md', '学生状态管理系统.cmd')
 $tempFiles = New-Object System.Collections.ArrayList
 
 try {
@@ -690,6 +690,26 @@ try {
         [System.IO.File]::WriteAllBytes($dest, $preserved[$f])
     }
     Write-Log '程序文件替换完成' 'OK'
+
+    # 老版本根目录散着多个 .cmd，现在统一收进 学生状态管理系统.cmd + tools\；顺手清掉旧入口
+    $legacyLaunchers = @(
+        '启动学生状态管理系统.cmd',
+        '停止学生状态管理系统.cmd',
+        '启动学生状态管理系统-局域网测试.cmd',
+        '允许局域网访问.cmd',
+        '绑定Tailscale.cmd',
+        '检查更新.cmd',
+        '重置登录密码.cmd'
+    )
+    $removedLegacy = 0
+    foreach ($name in $legacyLaunchers) {
+        $p = Join-Path $script:Root $name
+        if (Test-Path -LiteralPath $p) {
+            Remove-Item -LiteralPath $p -Force -ErrorAction SilentlyContinue
+            $removedLegacy++
+        }
+    }
+    if ($removedLegacy -gt 0) { Write-Log ("清理旧版根目录入口 {0} 个（已并入 学生状态管理系统.cmd）" -f $removedLegacy) 'OK' }
 
     $nodeExe = Resolve-NodeExe -Preferred $NodePath -Root $script:Root
     Write-Log "node：$nodeExe"

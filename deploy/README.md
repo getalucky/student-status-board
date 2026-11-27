@@ -40,8 +40,8 @@ powershell -ExecutionPolicy Bypass -File .\deploy\install.ps1
 
 1. 把 `deploy\release.json` 的 `repo` 改成真实 `owner/name`。
 2. 发版：`npm.cmd run package` → `release\student-status-board-<ver>.zip` + `release\version.json` 上传到 GitHub Release（两个都传）。
-3. 本机双击 **`检查更新.cmd`**：比版本 → 下载 → 校验 sha256 → 停服务 → 备份程序到 `backups\app-<旧版本>\` → 替换程序 → 跑 `scripts\migrate.js`（存在才跑）→ 起服务 → 30 秒 `/api/healthz` 探活，失败自动回滚。
-4. GitHub 打不开时：把 zip 和配套 `version.json` 放进安装目录的 `updates\`，再双击 `检查更新.cmd`（会自动识别）。
+3. 本机菜单按 `6`（`tools\检查更新.cmd`）：比版本 → 下载 → 校验 sha256 → 停服务 → 备份程序到 `backups\app-<旧版本>\` → 替换程序 → 跑 `scripts\migrate.js`（存在才跑）→ 起服务 → 30 秒 `/api/healthz` 探活，失败自动回滚。
+4. GitHub 打不开时：把 zip 和配套 `version.json` 放进安装目录的 `updates\`，再菜单按 `6`（会自动识别）。
 5. 日志：`logs\update.log`。
 
 ## 发布包

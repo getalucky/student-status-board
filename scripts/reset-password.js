@@ -99,7 +99,7 @@ async function main() {
   const existing = readAccountConfig(cfg);
   if (!existing?.passwordHash) {
     console.error(`还没有初始化过密码（${cfg.configPath} 不存在或没有 passwordHash）。`);
-    console.error('首次使用请先双击「启动学生状态管理系统.cmd」，按提示设置密码。');
+    console.error('首次使用请先双击「学生状态管理系统.cmd」，按提示设置密码。');
     process.exitCode = 2;
     return;
   }
@@ -160,7 +160,7 @@ async function main() {
     if (cleared.error) console.log(`原因：${cleared.error}`);
     console.log('建议先停止服务，再运行一次本脚本。');
   }
-  console.log('现在可以双击「启动学生状态管理系统.cmd」用新密码登录。');
+  console.log('现在可以双击「学生状态管理系统.cmd」用新密码登录。');
 }
 
 main().catch((err) => {

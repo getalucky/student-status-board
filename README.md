@@ -109,13 +109,36 @@ Node 没在 PATH 里时，把命令里的 `node.exe` / `npm.cmd` 换成实际安
 
 ## 3.5 一键启动（推荐，手动、不开机自启）
 
-不想敲命令就双击项目根目录的 `启动学生状态管理系统.cmd`，或者双击桌面上的「学生状态管理系统」快捷方式。它会：
+根目录只有 **`学生状态管理系统.cmd`** 一个入口。双击它出菜单：
+
+```
+1  启动 / 打开界面        5  允许局域网访问（防火墙）
+2  停止服务              6  检查更新
+3  重置登录密码           7  局域网测试模式
+4  绑定 Tailscale         0  退出
+```
+
+菜单顶部实时显示服务状态和 `http://127.0.0.1:3210`。每一项执行完回到菜单，不会关窗口。
+
+带参数可以跳过菜单直接执行（桌面快捷方式用的就是这套）：
+
+| 参数 | 作用 |
+| --- | --- |
+| `/start` | 启动服务并打开界面 |
+| `/stop` | 停止服务 |
+| `/reset` | 重置登录密码 |
+| `/tailscale` | 绑定 Tailscale |
+| `/lan` | 放行局域网防火墙 |
+| `/update` | 检查更新 |
+| `/lantest` | 局域网测试模式（`COOKIE_SECURE=false`） |
+
+启动时它会：
 
 1. 首次运行自动构建前端（`web/dist` 缺失时）；
 2. 首次运行引导设置登录密码（`data/config.json` 缺失时）；
 3. 启动服务并自动打开浏览器 `http://127.0.0.1:3210`；
 4. 窗口里会列出手机可用的局域网地址（形如 `http://192.168.x.x:3210`），并写到 `logs\access-urls.txt`，窗口关掉后也能翻；
-5. 启动成功后按回车关闭窗口，服务继续在后台运行；要停止时双击 `停止学生状态管理系统.cmd`（或运行 `scripts\stop.ps1`）。
+5. 启动成功后按回车关闭窗口，服务继续在后台运行；要停止时回菜单按 `2`（或运行 `scripts\stop.ps1`）。
 
 如果服务已经在跑（比如之前用隐藏进程启动的），再双击启动器不会重启它，只打印本机/局域网地址并停住等回车，不会一闪而过。
 
@@ -125,19 +148,19 @@ Node 没在 PATH 里时，把命令里的 `node.exe` / `npm.cmd` 换成实际安
 
 ### 3.6 局域网测试 / 访问（Tailscale 关闭时）
 
-主启动器已经内置局域网支持，不再需要单独的「局域网测试模式」：
+主启动器已经内置局域网支持，一般不需要额外操作：
 
-1. 双击 `启动学生状态管理系统.cmd`（已在跑则跳过）；
-2. 首次在新电脑上用局域网，双击 `允许局域网访问.cmd`，按 UAC 确认放行防火墙（规则只允许 `LocalSubnet`，即本地子网，不暴露到公网）；
+1. 菜单按 `1` 启动（已在跑则跳过）；
+2. 首次在新电脑上用局域网，菜单按 `5`（`tools\允许局域网访问.cmd`），按 UAC 确认放行防火墙（规则只允许 `LocalSubnet`，即本地子网，不暴露到公网）；
 3. 手机连同一个 Wi-Fi，访问启动窗口打印的 `http://<电脑局域网 IP>:3210`。`ipconfig` 里看 IPv4 地址，启动器也会自动列出可用地址。
 
-旧的 `启动学生状态管理系统-局域网测试.cmd` 仍然保留，专门做局域网测试（内部同样是 `HOST=0.0.0.0`，但 `COOKIE_SECURE=false`）；日常使用用主启动器即可。
+菜单里的 `7 局域网测试模式` 是排障用的（`COOKIE_SECURE=false`，HTTP 下也写 Cookie）；日常使用用第 `1` 项即可。
 
 手机和电脑共用服务器配置，一处保存另一端自动生效；但局域网 HTTP 下提交 Key 会以明文经过 Wi-Fi（没有 TLS），仅适合临时/同 Wi-Fi 使用，正式跨网请走 §6 的 Tailscale HTTPS。
 
 ### 3.7 忘记登录密码
 
-双击项目根目录的 `重置登录密码.cmd`（`install.ps1` 也会在桌面建一个同名快捷方式）：
+菜单按 `3`（或双击桌面「重置登录密码」快捷方式，等价于 `学生状态管理系统.cmd /reset`）：
 
 1. 输入 `RESET` 确认；
 2. 输入新密码两遍（至少 6 位）；
@@ -264,7 +287,7 @@ Tailscale 开着时手机/电脑走 `https://<机器>.<tailnet>.ts.net`；Tailsc
 
 1. **tailnet 打开两个开关**（只做一次）：<https://login.tailscale.com/admin/dns> → **MagicDNS** + **HTTPS Certificates**
 2. **生成 auth key**（只做一次）：<https://login.tailscale.com/admin/settings/keys> → Generate auth key，勾 **Reusable** + **Pre-approved**，**不要 Ephemeral**（离线会被自动移除）
-3. **双击 `绑定Tailscale.cmd`**，粘贴 key（输入不回显）；没装 Tailscale 会自动静默安装
+3. **菜单按 `4`（`tools\绑定Tailscale.cmd`）**，粘贴 key（输入不回显）；没装 Tailscale 会自动静默安装
 
 命令行等价：
 
@@ -581,7 +604,22 @@ JSON 结构（导入导出同一个 schema）：
 
 ---
 
-## 10. deploy 目录一览
+## 10. 入口与目录一览
+
+根目录只有 `学生状态管理系统.cmd` 一个入口（菜单 + `/start` `/stop` `/reset` `/tailscale` `/lan` `/update` `/lantest` 参数），单项动作都在 `tools\`：
+
+| 文件 | 用途 |
+| --- | --- |
+| `学生状态管理系统.cmd` | 唯一入口：菜单 / 带参数直接执行 |
+| `tools\启动服务.cmd` | `HOST=0.0.0.0` + `COOKIE_SECURE=auto`，起服务并打开浏览器 |
+| `tools\停止服务.cmd` | 按端口/PID 停后台服务 |
+| `tools\重置登录密码.cmd` | 重置登录密码（清会话 + 清服务器端 Key） |
+| `tools\绑定Tailscale.cmd` | 安装 / 登录 / `serve` 一条龙 |
+| `tools\允许局域网访问.cmd` | 放行防火墙 TCP 3210（仅 `LocalSubnet`） |
+| `tools\检查更新.cmd` | 检查更新 |
+| `tools\局域网测试模式.cmd` | `COOKIE_SECURE=false` 的排障模式 |
+
+`deploy\` 是部署脚本：
 
 | 文件 | 用途 | 要不要管理员 |
 | --- | --- | --- |
@@ -589,11 +627,11 @@ JSON 结构（导入导出同一个 schema）：
 | `deploy/uninstall.ps1` | 停服务 + 删除服务/备份任务，默认保留 `data\`；可选清日志/运行时/Tailscale/数据 | 要（自动提权） |
 | `deploy/install-service.ps1` | 只注册/重配 `StudentBoard` 服务（老脚本，保留兼容） | 要 |
 | `deploy/uninstall-service.ps1` | 只停服务并从服务表移除（老脚本，保留兼容） | 要 |
-| `deploy/tailscale-bind.ps1` | **一条命令绑定 Tailscale**：装（可选）→ auth key 加入 tailnet → `serve` → 写 `logs\tailscale-url.txt`；key 不落盘。`绑定Tailscale.cmd` 是它的双击入口 | 装/登录要（自动提权），只配 serve 不要 |
+| `deploy/tailscale-bind.ps1` | **一条命令绑定 Tailscale**：装（可选）→ auth key 加入 tailnet → `serve` → 写 `logs\tailscale-url.txt`；key 不落盘。`tools\绑定Tailscale.cmd` 是它的双击入口 | 装/登录要（自动提权），只配 serve 不要 |
 | `deploy/tailscale-serve.ps1` | 老脚本：只配 `tailscale serve --bg http://127.0.0.1:3210`，打印 ts.net 地址，`-Reset` / `-StatusOnly` | 不要 |
 | `deploy/backup-task.ps1` | 注册/删除每天 03:00 的备份任务，`-RunNow` 现场验证 | 要（S4U） |
 | `deploy/self-test.ps1` | 发布包/更新链路自测（临时目录，不碰真实 data/服务） | 不要 |
-| `deploy/allow-lan-firewall.ps1` | 放行本机局域网访问（`允许局域网访问.cmd` 调用，仅本地子网；主启动器首次用局域网时执行一次） | 要 |
+| `deploy/allow-lan-firewall.ps1` | 放行本机局域网访问（`tools\允许局域网访问.cmd` 调用，仅本地子网；主启动器首次用局域网时执行一次） | 要 |
 | `deploy/release.json` | 更新源配置：`repo`、`api_base`、`allow_local_updates` | 不要 |
 
 所有脚本都支持 `Get-Help .\deploy\xxx.ps1 -Full`；除发布自测外都是幂等的，重复跑等于重新配置。
@@ -701,7 +739,7 @@ dir .\web\dist          # 应该看到 index.html 和 assets\
 3. 手机上 `tailscale status` 是否已经连上（图标不是灰的）；
 4. 管理后台 HTTPS Certificates 是否开启（没开 `serve` 会失败）；
 5. 服务监听地址：主启动器和服务都监听 `0.0.0.0`（同时开回环 + 局域网），这是正常的；局域网访问前按 §3.6 放行防火墙。
-6. 局域网模式：手机和电脑连同一个 Wi-Fi、已在电脑上跑过 `允许局域网访问.cmd`，手机访问 `http://<电脑局域网IP>:3210`（不是 ts.net 地址）；公共 Wi-Fi 不建议使用。
+6. 局域网模式：手机和电脑连同一个 Wi-Fi、已在电脑上跑过 `tools\允许局域网访问.cmd`，手机访问 `http://<电脑局域网IP>:3210`（不是 ts.net 地址）；公共 Wi-Fi 不建议使用。
 
 ### 11.8 模型探测/生成失败
 
@@ -761,10 +799,10 @@ powershell -ExecutionPolicy Bypass -File .\deploy\install.ps1
 - 检测 Node.js ≥ 22；没有就从 npmmirror 下载 `v24.22.1` 免安装 zip 到 `runtime\node` 并使用
 - `node_modules` 缺失才 `npm.cmd ci --omit=dev --ignore-scripts`，并自检 `better-sqlite3` 能加载
 - 首次运行（`data\config.json` 不存在）时执行 `scripts/init.js` 设置登录密码
-- 在桌面创建「学生状态管理系统」快捷方式（指向 `启动学生状态管理系统.cmd`，双击启动）
+- 在桌面创建三个快捷方式：`学生状态管理系统`（打开菜单）、`启动学生状态管理系统`（`/start`）、`重置登录密码`（`/reset`），全部指向根目录唯一的 `学生状态管理系统.cmd`
 - 默认**不注册** Windows 服务、不开机自启；需要后台常驻时加 `-InstallService`（手动启动，仍是 0.0.0.0 + auto）
 - 监听 `HOST=0.0.0.0`、`COOKIE_SECURE=auto`，并自动放行防火墙 TCP 3210（仅 `LocalSubnet`）
-- 绑定 Tailscale：给了 `-TailscaleAuthKey` 就自动 `tailscale up` 加入 tailnet 并 `serve`；没给则用已登录状态，未登录只提示（双击 `绑定Tailscale.cmd` 可补）
+- 绑定 Tailscale：给了 `-TailscaleAuthKey` 就自动 `tailscale up` 加入 tailnet 并 `serve`；没给则用已登录状态，未登录只提示（菜单 `4` 可补）
 - 注册每天 03:00 的备份任务（`node scripts\backup.js --keep 7`）
 - 冒烟检查 `/api/healthz`（没有现成实例时临时起进程验证后关掉），打印手机 HTTPS 地址
 
@@ -826,12 +864,12 @@ powershell -ExecutionPolicy Bypass -File .\deploy\uninstall.ps1
 
 ### 13.2 本机检查更新
 
-双击根目录 `检查更新.cmd`（管理员会由 `update.ps1` 自动请求提权），流程：
+菜单按 `6`（`tools\检查更新.cmd`，管理员会由 `update.ps1` 自动请求提权），流程：
 
 1. 读本地 `version.json`，查 GitHub latest release 的 `version.json`，semver 比较，不新直接退出
 2. 下载 zip → 校验 `sha256` → 解压 → 按包内 `version.json` 的 `files_sha256` 逐文件校验
 3. 停 `StudentBoard` 服务 → 把当前程序目录备份到 `backups\app-<旧版本>\`
-4. 只替换 `server/ shared/ scripts/ deploy/ web/dist/ node_modules/ package.json package-lock.json version.json README.md 检查更新.cmd`，保留 `data logs updates backups runtime`
+4. 只替换 `server/ shared/ scripts/ tools/ deploy/ web/dist/ node_modules/ package.json package-lock.json version.json README.md 学生状态管理系统.cmd`，保留 `data logs updates backups runtime`
 5. 有 `scripts\migrate.js` 就跑迁移；没有则由 `server/db.js` 启动时自动补表
 6. 起服务，30 秒内 `/api/healthz` 不通或进程退出 → 停服、回滚旧目录、重起
 
@@ -849,7 +887,7 @@ powershell -ExecutionPolicy Bypass -File .\scripts\update.ps1 -LocalOnly   # 只
 
 1. 在能上网的机器下载同一版本的 `student-status-board-<ver>.zip` 和 `release\version.json`。
 2. 把两个文件放进安装目录的 `updates\`（`version.json` 里的 `zip.file` 指向 zip 名；直接放 zip 且包内有 `version.json` 也能识别）。
-3. 双击 `检查更新.cmd`；脚本会跳过 GitHub，直接用本地包。也可以显式指定：
+3. 菜单按 `6`（或 `tools\检查更新.cmd`）；脚本会跳过 GitHub，直接用本地包。也可以显式指定：
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\scripts\update.ps1 -PackagePath .\updates\student-status-board-1.0.1.zip -VersionFile .\updates\version.json
@@ -893,7 +931,7 @@ cd D:\student-status-board\android
 
 ## 15. 安全说明
 
-- 双模式入口：主启动器监听 `0.0.0.0`，同一局域网内设备可访问，必须输入登录密码；只建议在家庭/可信 Wi-Fi 使用，`允许局域网访问.cmd` 的防火墙规则只放行本地子网。
+- 双模式入口：主启动器监听 `0.0.0.0`，同一局域网内设备可访问，必须输入登录密码；只建议在家庭/可信 Wi-Fi 使用，`tools\允许局域网访问.cmd` 的防火墙规则只放行本地子网。
 - 主启动器/服务监听 `0.0.0.0`（回环 + 局域网），防火墙只放行 `LocalSubnet`；Tailscale 设备列表是跨网访问白名单。**不要把 3210 映射/转发到公网**（路由器端口映射、UPnP、内网穿透都不要开）。
 - Tailscale HTTPS 全链路，证书由 Tailscale 自动签发和续期；局域网 HTTP 没有 TLS，只在同 Wi-Fi 下使用。
 - 单账号；口令只存加盐哈希在 `data\config.json`，不进库、不进 git。
@@ -917,7 +955,7 @@ cd D:\student-status-board\android
 | 服务在跑且自启 | `Get-Service StudentBoard` | `Running`，启动类型 Automatic |
 | 健康检查 | `Invoke-RestMethod http://127.0.0.1:3210/api/healthz` | `ok: true`、`db: true` |
 | 本机页面 | 浏览器开 `http://127.0.0.1:3210` | 出登录页（主启动器/服务 `auto` 下可直接登录；裸 `npm start` 默认 `true` 才需 HTTPS，见 §11.5） |
-| 局域网页面（主启动器） | 同 Wi-Fi 手机开 `http://<电脑局域网IP>:3210` | 出登录页并能登录（先在电脑上跑 `允许局域网访问.cmd`） |
+| 局域网页面（主启动器） | 同 Wi-Fi 手机开 `http://<电脑局域网IP>:3210` | 出登录页并能登录（先在电脑上跑 `tools\允许局域网访问.cmd`） |
 | Tailscale 反代 | `tailscale serve status` | 有一行 `https://<机器>.<tailnet>.ts.net → http://127.0.0.1:3210` |
 | 手机访问 | 手机（已连 Tailscale）开 ts.net 地址 | 出登录页，能登录 |
 | 备份任务 | `Get-ScheduledTaskInfo -TaskName StudentBoard-Backup` | `LastTaskResult = 0`，`NextRunTime` 是明天 03:00 |

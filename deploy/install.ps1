@@ -67,7 +67,7 @@
 
 .PARAMETER TailscaleAuthKey
     Tailscale auth key（tskey-auth-...）。给了就能无人值守加入 tailnet；
-    不给时已登录的机器直接用，没登录会提示手动跑 绑定Tailscale.cmd。
+    不给时已登录的机器直接用，没登录会提示菜单按 4。
 
 .PARAMETER InstallTailscale
     没装 Tailscale 时自动静默安装（winget 优先，其次官方 MSI）。
@@ -353,6 +353,7 @@ function New-DesktopShortcut {
         [string]$Root,
         [string]$Name,
         [string]$TargetFile,
+        [string]$Arguments,
         [string]$Description = '学生状态管理系统'
     )
     $desktop = [Environment]::GetFolderPath('Desktop')
@@ -363,6 +364,7 @@ function New-DesktopShortcut {
     $shell = New-Object -ComObject WScript.Shell
     $shortcut = $shell.CreateShortcut($lnk)
     $shortcut.TargetPath = $target
+    if (-not [string]::IsNullOrWhiteSpace($Arguments)) { $shortcut.Arguments = $Arguments }
     $shortcut.WorkingDirectory = $Root
     $shortcut.Description = $Description
     $shortcut.IconLocation = (Join-Path $env:SystemRoot 'System32\shell32.dll') + ',220'
@@ -371,29 +373,26 @@ function New-DesktopShortcut {
 }
 
 $cmdExt = [string][char]46 + 'cmd'
-$launcherFile = "启动学生状态管理系统$cmdExt"
-$resetFile = "重置登录密码$cmdExt"
+$launcherFile = "学生状态管理系统$cmdExt"
 
 if ($SkipShortcut) {
     Write-Log '跳过桌面快捷方式（-SkipShortcut）' 'WARN'
 } elseif ($DryRun) {
-    Write-Log "[dry-run] 将在桌面创建「学生状态管理系统」快捷方式 → $launcherFile"
-    if (Test-Path -LiteralPath (Join-Path $script:Root $resetFile)) {
-        Write-Log "[dry-run] 同时创建「重置登录密码」快捷方式 → $resetFile"
-    }
+    Write-Log "[dry-run] 将在桌面创建「学生状态管理系统」快捷方式 → $launcherFile（不带参数，打开菜单）"
+    Write-Log "[dry-run] 同时创建「启动学生状态管理系统」快捷方式 → $launcherFile /start"
+    Write-Log "[dry-run] 同时创建「重置登录密码」快捷方式 → $launcherFile /reset"
 } else {
-    try {
-        $lnk = New-DesktopShortcut -Root $script:Root -Name '学生状态管理系统' -TargetFile $launcherFile -Description '学生状态管理系统 · 双击启动'
-        Write-Log "桌面快捷方式已创建：$lnk" 'OK'
-    } catch {
-        Write-Log ("桌面快捷方式创建失败：{0}，手动把 $launcherFile 发到桌面即可" -f $_.Exception.Message) 'WARN'
-    }
-    if (Test-Path -LiteralPath (Join-Path $script:Root $resetFile)) {
+    $shortcuts = @(
+        @{ Name = '学生状态管理系统'; Args = ''; Desc = '学生状态管理系统 · 打开菜单' },
+        @{ Name = '启动学生状态管理系统'; Args = '/start'; Desc = '学生状态管理系统 · 一键启动' },
+        @{ Name = '重置登录密码'; Args = '/reset'; Desc = '忘记密码时重置登录密码' }
+    )
+    foreach ($s in $shortcuts) {
         try {
-            $lnk2 = New-DesktopShortcut -Root $script:Root -Name '重置登录密码' -TargetFile $resetFile -Description '忘记密码时重置学生状态管理系统登录密码'
-            Write-Log "重置密码快捷方式已创建：$lnk2" 'OK'
+            $lnk = New-DesktopShortcut -Root $script:Root -Name $s.Name -TargetFile $launcherFile -Arguments $s.Args -Description $s.Desc
+            Write-Log ("桌面快捷方式已创建：{0}" -f $lnk) 'OK'
         } catch {
-            Write-Log ("重置密码快捷方式创建失败：{0}" -f $_.Exception.Message) 'WARN'
+            Write-Log ("快捷方式「{0}」创建失败：{1}" -f $s.Name, $_.Exception.Message) 'WARN'
         }
     }
 }
@@ -572,7 +571,7 @@ if ($SkipTailscale) {
         else { $env:TS_AUTHKEY = $oldKey }
     }
     if ($bindExit -ne 0) {
-        Write-Log 'Tailscale 没绑好：不影响本机和局域网使用。双击 绑定Tailscale.cmd 可重试。' 'WARN'
+        Write-Log 'Tailscale 没绑好：不影响本机和局域网使用。菜单按 4 可重试。' 'WARN'
     } else {
         $urlFile = Join-Path (Join-Path $script:Root 'logs') 'tailscale-url.txt'
         if (Test-Path -LiteralPath $urlFile) {
@@ -698,7 +697,7 @@ else { Write-Host ("  服务名：{0}（手动启动，不开机自启）" -f $S
 Write-Host ("  本机  ：http://127.0.0.1:{0}" -f $Port)
 if ($ListenHost -eq '0.0.0.0') { Write-Host ("  局域网：http://<本机局域网IP>:{0}（同一 Wi-Fi 可用）" -f $Port) }
 if ($phoneUrl) { Write-Host ("  手机  ：{0}" -f $phoneUrl) -ForegroundColor Green }
-else { Write-Host '  手机  ：没绑 Tailscale；双击 绑定Tailscale.cmd 可补绑' }
+else { Write-Host '  手机  ：没绑 Tailscale；菜单按 4 可补绑' }
 Write-Host ("  日志  ：{0}" -f (Join-Path $script:Root 'logs'))
 $guidePath = Join-Path $script:Root '部署说明.md'
 if (-not (Test-Path -LiteralPath $guidePath)) { $guidePath = Join-Path $script:Root 'docs\部署说明.md' }

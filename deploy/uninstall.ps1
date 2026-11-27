@@ -178,11 +178,18 @@ if ($ResetTailscale) {
 
 # ---------------------------------------------------------------- 桌面快捷方式
 Write-Step '删除桌面快捷方式'
-$desktopLnk = Join-Path ([Environment]::GetFolderPath('Desktop')) '学生状态管理系统.lnk'
-if (Test-Path -LiteralPath $desktopLnk) {
-    Remove-Item -LiteralPath $desktopLnk -Force
-    Write-Ok "已删除 $desktopLnk"
-} else { Write-Note '快捷方式不存在，跳过' }
+$desktopDir = [Environment]::GetFolderPath('Desktop')
+$lnkNames = @('学生状态管理系统.lnk', '启动学生状态管理系统.lnk', '重置登录密码.lnk')
+$removedAny = $false
+foreach ($name in $lnkNames) {
+    $lnk = Join-Path $desktopDir $name
+    if (Test-Path -LiteralPath $lnk) {
+        Remove-Item -LiteralPath $lnk -Force
+        Write-Ok "已删除 $lnk"
+        $removedAny = $true
+    }
+}
+if (-not $removedAny) { Write-Note '快捷方式不存在，跳过' }
 
 # ---------------------------------------------------------------- 可选删除
 if ($RemoveLogs) {

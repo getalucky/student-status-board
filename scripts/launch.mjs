@@ -5,7 +5,7 @@
  * - 首次运行引导设置登录密码（data/config.json 缺失时）
  * - 启动服务并自动打开浏览器
  * - 服务以隐藏的后台进程运行；按回车关掉这个窗口，服务继续跑
- * - 停止服务用「停止学生状态管理系统.cmd」，不会开机自启
+ * - 停止服务用「tools\停止服务.cmd」，不会开机自启
  *
  * 可选环境变量：
  *   PORT=3210        监听端口
@@ -27,14 +27,16 @@ const NO_OPEN = process.env.LAUNCH_NO_OPEN === '1';
 
 function lanAddresses() {
   const result = [];
+  // 虚拟网卡（Hyper-V / WSL / Docker / VMware / VPN / 蓝牙）的地址手机上连不到，别列出来
+  const virtualName = /tailscale|vethernet|hyper-v|virtualbox|vmware|loopback|wsl|docker|bluetooth|tap-|tun|vpn/i;
   for (const [name, list] of Object.entries(os.networkInterfaces())) {
-    // Tailscale 的 100.x 是私网但不算「同一 Wi-Fi」，别混进局域网地址
-    if (/tailscale/i.test(name)) continue;
+    if (virtualName.test(name)) continue;
     for (const item of list || []) {
       if (item.family !== 'IPv4' || item.internal) continue;
       if (item.address.startsWith('169.254.')) continue;
       const [a, b] = item.address.split('.').map(Number);
       if (a === 100 && b >= 64 && b <= 127) continue; // CGNAT / Tailscale
+      if (a === 172 && b >= 16 && b <= 31) continue; // Hyper-V / Docker 默认网段
       result.push(item.address);
     }
   }
@@ -84,6 +86,8 @@ function saveAccessUrls() {
 
 /** 双击 .cmd 时窗口是 TTY：停住等回车，别一闪而过；管道/自动化里不阻塞。 */
 function pauseIfInteractive() {
+  // 从统一菜单调用时由菜单负责停住，这里直接返回，免得要按两次回车
+  if (process.env.SSB_NO_PAUSE === '1') return Promise.resolve();
   if (!process.stdin.isTTY) return Promise.resolve();
   return new Promise((resolve) => {
     process.stdout.write('\n按回车关闭这个窗口…');
@@ -259,7 +263,7 @@ async function main() {
   printAccessUrls();
   saveAccessUrls();
   log('服务已在后台运行。按回车关闭这个窗口，服务不会停。');
-  log('需要停止时，双击「停止学生状态管理系统.cmd」。');
+  log('需要停止时，双击「tools\\停止服务.cmd」。');
   await pauseIfInteractive();
 }
 
